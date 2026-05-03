@@ -1,0 +1,3468 @@
+<!doctype html>
+<html lang="en" data-theme="dark" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0A0A0A">
+<meta name="description" content="Ospreylia FanView — unofficial Ospreys supporter companion. Squad, fixtures, history and analytics, built by fans for fans.">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self' data:; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+<title>Ospreylia FanView — Unofficial Ospreys supporter companion</title>
+
+<!--
+  =============================================================================
+  Ospreylia FanView v1.0 (Phase 1)
+  Unofficial Ospreys supporter companion — built by fans, for fans.
+
+  Stack:        Single HTML file · vanilla JS · embedded CSS · static data
+  Deploy:       Netlify Drop (drag this file to drop.netlify.com)
+  Data:         All embedded — works fully offline once loaded
+  Storage:      localStorage with safe-fallback wrapper
+  A11y target:  WCAG 2.2 AA · keyboard navigable · semantic HTML
+  Brand stance: UNOFFICIAL fan-made app. Not associated with Ospreys Rugby,
+                the URC or the WRU. No official badge geometry used.
+
+  File layout (top → bottom):
+    1.  Meta + CSP
+    2.  CSS  · tokens · base/reset · layout · components · utilities · responsive
+    3.  HTML · header · nav (desktop + mobile) · main pages · footer · search overlay
+    4.  JS   · data · state · storage · i18n · helpers · render · events · init
+
+  Phases (this build = Phase 1 only):
+    Phase 1 → app shell + Home dashboard + Settings + search shell  (✓ done)
+    Phase 2 → Squad + Legends pages
+    Phase 3 → Fixtures + Results + URC standings
+    Phase 4 → History · Honours · Head-to-Head · Season records
+    Phase 5 → Analytics charts (inline SVG)
+    Phase 6 → Coaches + Venue
+    Phase 7 → Welsh full coverage + accessibility audit + search expansion
+  =============================================================================
+-->
+
+<style>
+/* =========================================================================
+   1. DESIGN TOKENS
+   ========================================================================= */
+:root {
+  --bg: #0A0A0A;
+  --surface-1: #141414;
+  --card: #1A1A1A;
+  --card-elevated: #202020;
+  --border: #2A2A2A;
+  --brand: #F47920;
+  --brand-hover: #FF8B3D;
+  --brand-soft: rgba(244,121,32,0.14);
+  --brand-text: #F47920;          /* foreground orange for text — overridden in light mode for AA contrast */
+  --text-primary: #E0E0E0;
+  --text-secondary: #B8B8B8;
+  --text-muted: #888888;
+  --text-inverse: #FFFFFF;
+  --success: #22C55E;
+  --danger: #EF4444;
+  --draw: #9CA3AF;
+  --heritage-blue: #4DA3D9;
+  --heritage-grey: #6B7280;
+  --amber: #F59E0B;
+
+  --r-card: 12px;
+  --r-btn: 8px;
+  --tap: 44px;
+  --maxw: 1280px;
+  --shadow-card: 0 4px 16px rgba(0,0,0,.28);
+  --shadow-pop:  0 12px 36px rgba(0,0,0,.5);
+}
+[data-theme="light"] {
+  --bg: #F8F8F9;
+  --surface-1: #FFFFFF;
+  --card: #FFFFFF;
+  --card-elevated: #F4F4F5;
+  --border: #E4E4E7;
+  --text-primary: #0A0A0A;
+  --text-secondary: #404040;
+  --text-muted: #5A5A5A;
+  --text-inverse: #0A0A0A;
+  --shadow-card: 0 4px 14px rgba(0,0,0,.06);
+  --shadow-pop:  0 12px 28px rgba(0,0,0,.12);
+  --brand-soft: rgba(244,121,32,0.10);
+  --brand-text: #A6480B;          /* darker orange — AA on light bg (5.5:1) */
+}
+
+/* =========================================================================
+   2. BASE / RESET
+   ========================================================================= */
+*,*::before,*::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  min-height: 100dvh;
+  padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  -webkit-tap-highlight-color: transparent;
+}
+@media (min-width: 900px) { body { padding-bottom: 0; } }
+
+/* Subtle pitch-grid texture — supporter atmosphere, not decoration */
+body::before {
+  content: "";
+  position: fixed; inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, var(--brand-soft) 0%, transparent 65%),
+    repeating-linear-gradient(0deg,
+      color-mix(in srgb, var(--text-primary) 3%, transparent) 0,
+      color-mix(in srgb, var(--text-primary) 3%, transparent) 1px,
+      transparent 1px, transparent 96px);
+  opacity: .8;
+}
+[data-theme="light"] body::before { opacity: .55; }
+
+img, svg { display: block; max-width: 100%; }
+a { color: var(--brand-text); text-decoration: none; }
+a:hover, a:focus-visible { color: var(--brand-hover); text-decoration: underline; }
+button { font: inherit; color: inherit; cursor: pointer; }
+input { font: inherit; color: inherit; }
+
+h1,h2,h3,h4 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0;
+  line-height: 1.15;
+}
+h1 { font-weight: 800; }
+
+:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+.skip {
+  position: absolute; left: 8px; top: 8px;
+  background: var(--brand); color: #0A0A0A;
+  padding: 8px 12px; border-radius: var(--r-btn);
+  font-weight: 700; transform: translateY(-200%);
+  transition: transform .15s ease;
+  z-index: 100;
+}
+.skip:focus { transform: translateY(0); }
+
+/* =========================================================================
+   3. LAYOUT
+   ========================================================================= */
+main {
+  position: relative;
+  z-index: 1;
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 16px;
+}
+@media (min-width: 600px) { main { padding: 24px; } }
+.page { display: none; }
+.page.active { display: block; }
+.page > * + * { margin-top: 16px; }
+@media (min-width: 600px) { .page > * + * { margin-top: 20px; } }
+
+/* =========================================================================
+   4. COMPONENTS — header, nav, cards, chips, toggle, search, etc.
+   ========================================================================= */
+
+/* Header */
+.app-header {
+  position: sticky; top: 0; z-index: 30;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+.header-inner {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+@media (min-width: 600px) { .header-inner { padding: 12px 24px; gap: 16px; } }
+
+.brand-lock {
+  display: flex; align-items: center; gap: 10px;
+  text-decoration: none; color: var(--text-primary);
+  background: transparent; border: 0; padding: 0;
+}
+.brand-lock:hover, .brand-lock:focus-visible { color: var(--text-primary); text-decoration: none; }
+.emblem {
+  width: 40px; height: 40px;
+  flex: 0 0 40px;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,.4));
+}
+.brand-text { display: flex; flex-direction: column; line-height: 1.05; min-width: 0; }
+.brand-name {
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+.brand-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+@media (min-width: 600px) {
+  .emblem { width: 44px; height: 44px; flex-basis: 44px; }
+  .brand-name { font-size: 18px; }
+  .brand-sub { font-size: 12px; }
+}
+
+.header-actions {
+  display: flex; align-items: center; gap: 6px;
+  justify-self: end;
+}
+
+/* Search trigger — opens search overlay */
+.search-trigger {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 40px;
+  padding: 0 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 13px;
+  min-width: 40px;
+  transition: border-color .15s, color .15s;
+}
+.search-trigger:hover, .search-trigger:focus-visible {
+  border-color: var(--brand);
+  color: var(--text-primary);
+}
+.search-trigger svg { width: 18px; height: 18px; flex: 0 0 18px; }
+.search-trigger .label { display: none; }
+@media (min-width: 600px) {
+  .search-trigger { padding: 0 14px; min-width: 200px; }
+  .search-trigger .label { display: inline; }
+}
+
+/* Icon button (theme + lang toggles) */
+.icon-btn {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  width: var(--tap); height: var(--tap);
+  border-radius: var(--r-btn);
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background .15s, border-color .15s;
+}
+.icon-btn:hover { background: var(--card-elevated); border-color: var(--brand); }
+.icon-btn[aria-pressed="true"] { border-color: var(--brand); color: var(--brand-text); }
+.icon-btn svg { width: 22px; height: 22px; }
+.lang-btn {
+  font-weight: 800; font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+/* Desktop nav */
+.desktop-nav {
+  position: sticky; top: 65px; z-index: 25;
+  display: none;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.desktop-nav-inner {
+  max-width: var(--maxw); margin: 0 auto;
+  padding: 0 16px;
+  display: flex; gap: 4px; overflow-x: auto;
+  scrollbar-width: thin;
+}
+.desktop-nav button {
+  background: transparent; border: 0;
+  color: var(--text-secondary);
+  padding: 12px 14px;
+  font-weight: 600; font-size: 14px;
+  border-bottom: 3px solid transparent;
+  white-space: nowrap;
+  min-height: var(--tap);
+  transition: color .15s;
+}
+.desktop-nav button:hover { color: var(--text-primary); }
+.desktop-nav button[aria-current="page"] {
+  color: var(--brand-text);
+  border-bottom-color: var(--brand);
+}
+@media (min-width: 900px) { .desktop-nav { display: block; } }
+
+/* Bottom nav (mobile) */
+.bottom-nav {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  background: color-mix(in srgb, var(--surface-1) 95%, transparent);
+  border-top: 1px solid var(--border);
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+  z-index: 30;
+  backdrop-filter: blur(10px);
+}
+.bottom-nav button {
+  background: transparent; border: 0;
+  color: var(--text-muted);
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 4px;
+  min-height: 56px;
+  border-radius: var(--r-btn);
+  font-size: 11px; font-weight: 600;
+}
+.bottom-nav button svg { width: 22px; height: 22px; }
+.bottom-nav button[aria-current="page"] { color: var(--brand-text); }
+.bottom-nav button:hover { color: var(--text-primary); }
+@media (min-width: 900px) { .bottom-nav { display: none; } }
+
+/* Cards */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: 18px;
+  box-shadow: var(--shadow-card);
+}
+@media (min-width: 600px) { .card { padding: 22px; } }
+.card .eyebrow {
+  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+}
+.card h2 { font-size: 18px; margin-top: 4px; }
+
+/* Hero */
+.hero {
+  position: relative;
+  background:
+    radial-gradient(circle at 8% 0%, var(--brand-soft) 0%, transparent 55%),
+    var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: 22px 18px;
+  display: flex; align-items: center; gap: 16px;
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+.hero-emblem {
+  width: 72px; height: 72px; flex: 0 0 72px;
+  border-radius: 14px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  display: grid; place-items: center;
+}
+.hero h1 {
+  font-size: clamp(20px, 4.6vw, 28px);
+  margin: 0 0 4px 0;
+}
+.hero p { margin: 0; color: var(--text-secondary); font-size: 14px; }
+.hero-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+@media (min-width: 600px) {
+  .hero { padding: 28px; gap: 22px; }
+  .hero-emblem { width: 96px; height: 96px; flex-basis: 96px; }
+}
+
+/* Chips / tags */
+.chip {
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  background: var(--card-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 4px 8px;
+  border-radius: 999px;
+}
+.chip.brand { color: #0A0A0A; background: var(--brand); border-color: var(--brand); }
+.chip.success { color: var(--success); border-color: color-mix(in srgb, var(--success) 50%, transparent); background: color-mix(in srgb, var(--success) 14%, transparent); }
+.chip.danger  { color: var(--danger);  border-color: color-mix(in srgb, var(--danger) 50%, transparent);  background: color-mix(in srgb, var(--danger) 14%, transparent); }
+.chip.draw    { color: var(--draw);    border-color: color-mix(in srgb, var(--draw) 50%, transparent);    background: color-mix(in srgb, var(--draw) 14%, transparent); }
+.chip.heritage{ color: var(--heritage-blue); border-color: color-mix(in srgb, var(--heritage-blue) 50%, transparent); background: color-mix(in srgb, var(--heritage-blue) 14%, transparent); }
+
+/* Stat grid */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+@media (min-width: 600px) { .stat-grid { grid-template-columns: repeat(4, 1fr); gap: 12px; } }
+.stat {
+  background: var(--card-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+}
+.stat .v { font-size: 22px; font-weight: 800; line-height: 1.1; letter-spacing: -0.01em; }
+.stat .k { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 4px; }
+
+/* Match countdown */
+.match {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 0 8px;
+}
+.match .side { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; }
+.match .badge {
+  width: 56px; height: 56px;
+  border-radius: 12px;
+  background: var(--card-elevated);
+  border: 1px solid var(--border);
+  display: grid; place-items: center;
+  font-weight: 800; letter-spacing: 0.04em; font-size: 14px;
+}
+.match .name { font-weight: 700; font-size: 14px; }
+.match .vs { color: var(--text-muted); font-weight: 800; font-size: 14px; padding: 0 8px; }
+.countdown {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 8px; margin-top: 12px;
+}
+.countdown div {
+  background: var(--card-elevated); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 8px; text-align: center;
+}
+.countdown .n { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; }
+.countdown .l { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.match-meta {
+  display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+  color: var(--text-muted); font-size: 13px; margin-top: 12px;
+}
+
+/* League position */
+.pos-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 16px;
+  margin-top: 8px;
+}
+.pos-num { font-size: 44px; font-weight: 800; line-height: 1; color: var(--brand-text); letter-spacing: -0.02em; }
+.pos-label { color: var(--text-muted); font-size: 12px; }
+.pos-record { font-weight: 700; }
+
+/* Last 5 form strip */
+.results-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.r-pill {
+  display: inline-grid; place-items: center;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  font-weight: 800; font-size: 13px;
+  border: 1px solid var(--border);
+}
+.r-pill.W { background: color-mix(in srgb, var(--success) 22%, transparent); color: var(--success); border-color: color-mix(in srgb, var(--success) 50%, transparent); }
+.r-pill.L { background: color-mix(in srgb, var(--danger) 22%, transparent);  color: var(--danger);  border-color: color-mix(in srgb, var(--danger) 50%, transparent); }
+.r-pill.D { background: color-mix(in srgb, var(--draw) 22%, transparent);    color: var(--draw);    border-color: color-mix(in srgb, var(--draw) 50%, transparent); }
+.results-detail { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.results-detail .row {
+  display: grid; grid-template-columns: 28px 1fr auto; gap: 8px; align-items: center;
+  padding: 8px 0; border-top: 1px dashed var(--border);
+}
+.results-detail .row:first-child { border-top: 0; }
+.r-mini { width: 22px; height: 22px; font-size: 11px; }
+.r-opp { font-weight: 600; }
+.r-sub { color: var(--text-muted); font-size: 11px; }
+.r-score { font-weight: 800; font-variant-numeric: tabular-nums; }
+
+/* Teasers (history snapshot + legend spotlight) */
+.teaser-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+@media (min-width: 768px) { .teaser-grid { grid-template-columns: 1fr 1fr; gap: 20px; } }
+.teaser {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: 18px;
+  display: flex; flex-direction: column; gap: 10px;
+  box-shadow: var(--shadow-card);
+  text-align: left;
+  transition: border-color .15s, transform .15s;
+}
+.teaser:hover, .teaser:focus-visible {
+  border-color: var(--brand);
+  transform: translateY(-1px);
+  text-decoration: none;
+}
+.teaser h3 { font-size: 16px; margin: 0; color: var(--text-primary); }
+.teaser .timeline {
+  list-style: none; padding: 0; margin: 0;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.teaser .timeline li {
+  display: grid; grid-template-columns: 56px 1fr; gap: 10px;
+  font-size: 13px;
+}
+.teaser .timeline .y {
+  color: var(--brand-text); font-weight: 800; letter-spacing: -0.01em;
+}
+.teaser .cta {
+  margin-top: auto; font-size: 13px; font-weight: 700;
+  color: var(--brand-text); display: inline-flex; align-items: center; gap: 6px;
+  padding-top: 4px;
+}
+.teaser .legend-row {
+  display: grid; grid-template-columns: 56px 1fr; gap: 12px;
+  align-items: center;
+}
+.teaser .avatar {
+  width: 56px; height: 56px;
+  border-radius: 12px;
+  background: var(--brand-soft);
+  color: var(--brand-text);
+  display: grid; place-items: center;
+  font-weight: 800; font-size: 16px; letter-spacing: 0.04em;
+}
+.teaser .legend-name { font-weight: 800; font-size: 16px; line-height: 1.15; }
+.teaser .legend-meta { color: var(--text-secondary); font-size: 12px; }
+.teaser .legend-stats {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 6px; padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+.teaser .legend-stats div { text-align: center; }
+.teaser .legend-stats .v { font-weight: 800; font-size: 14px; }
+.teaser .legend-stats .k { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* More tile grid */
+.more-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+@media (min-width: 600px) { .more-grid { grid-template-columns: repeat(3, 1fr); gap: 12px; } }
+.more-tile {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: 16px; min-height: 100px;
+  display: flex; flex-direction: column; gap: 8px;
+  text-align: left;
+  transition: border-color .15s;
+}
+.more-tile:hover, .more-tile:focus-visible { border-color: var(--brand); }
+.more-tile .ic {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  background: var(--brand-soft);
+  color: var(--brand-text);
+  display: grid; place-items: center;
+}
+.more-tile h3 { margin: 0; font-size: 15px; }
+.more-tile p { margin: 0; color: var(--text-muted); font-size: 12px; }
+
+/* Settings rows */
+.setting {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.setting:last-child { border-bottom: 0; }
+.setting .t { font-weight: 600; }
+.setting .d { color: var(--text-muted); font-size: 12px; }
+.toggle {
+  --tw: 44px; --th: 26px;
+  position: relative;
+  width: var(--tw); height: var(--th);
+  background: var(--card-elevated);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  flex: 0 0 var(--tw);
+}
+.toggle::after {
+  content: "";
+  position: absolute; top: 2px; left: 2px;
+  width: 20px; height: 20px;
+  background: var(--text-primary);
+  border-radius: 50%;
+  transition: transform .18s ease;
+}
+.toggle[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); }
+.toggle[aria-pressed="true"]::after { transform: translateX(18px); background: #0A0A0A; }
+
+/* Coming-soon empty states (polished, not just stubs) */
+.empty-state {
+  text-align: center;
+  padding: 32px 20px;
+  color: var(--text-muted);
+}
+.empty-state .icon {
+  width: 56px; height: 56px;
+  border-radius: 14px;
+  background: var(--brand-soft);
+  color: var(--brand-text);
+  display: grid; place-items: center;
+  margin: 0 auto 14px;
+}
+.empty-state h2 { color: var(--text-primary); margin: 0 0 6px 0; font-size: 18px; }
+.empty-state p { margin: 0 auto; max-width: 42ch; }
+.empty-state ul {
+  list-style: none; padding: 0; margin: 16px auto 0;
+  max-width: 32ch; text-align: left;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.empty-state ul li {
+  padding: 6px 0; padding-left: 20px;
+  position: relative;
+}
+.empty-state ul li::before {
+  content: ""; position: absolute; left: 0; top: 12px;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--brand);
+}
+
+/* Footer */
+footer {
+  position: relative; z-index: 1;
+  max-width: var(--maxw);
+  margin: 24px auto 0;
+  padding: 16px 16px 32px;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  border-top: 1px solid var(--border);
+}
+@media (min-width: 600px) { footer { padding: 24px; } }
+footer .built {
+  font-weight: 700; color: var(--text-secondary);
+  letter-spacing: 0.04em;
+}
+
+/* Search overlay */
+.search-overlay {
+  position: fixed; inset: 0;
+  z-index: 50;
+  background: color-mix(in srgb, #000 65%, transparent);
+  display: none;
+  padding-top: 10vh;
+  justify-content: center;
+}
+.search-overlay.active { display: flex; }
+.search-panel {
+  width: min(640px, calc(100% - 32px));
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-pop);
+  height: fit-content;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.search-panel .field {
+  display: grid; grid-template-columns: auto 1fr auto; gap: 8px;
+  align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.search-panel input[type="search"] {
+  background: transparent;
+  border: 0;
+  outline: none;
+  font-size: 16px;
+  width: 100%;
+  color: var(--text-primary);
+  min-height: 32px;
+}
+.search-panel .field svg { color: var(--text-muted); width: 18px; height: 18px; }
+.search-panel .esc {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--card-elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-family: ui-monospace, monospace;
+}
+.search-results {
+  overflow-y: auto;
+  padding: 6px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.search-results .r {
+  display: grid; grid-template-columns: 36px 1fr auto;
+  gap: 10px; align-items: center;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  width: 100%;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.search-results .r:hover, .search-results .r:focus-visible {
+  background: var(--card-elevated);
+}
+.search-results .r .ic {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  background: var(--brand-soft);
+  color: var(--brand-text);
+  display: grid; place-items: center;
+  font-weight: 800; font-size: 12px;
+}
+.search-results .r .t { font-weight: 700; font-size: 14px; line-height: 1.2; }
+.search-results .r .s { font-size: 12px; color: var(--text-muted); }
+.search-results .empty {
+  padding: 24px; text-align: center; color: var(--text-muted); font-size: 13px;
+}
+
+/* =========================================================================
+   PHASE 3 — Fixtures · Results · Standings
+   ========================================================================= */
+.sub-tabs {
+  display: flex; gap: 4px;
+  background: var(--card-elevated);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px;
+  margin-top: 12px;
+  overflow-x: auto;
+}
+.sub-tabs button {
+  flex: 1 0 auto;
+  background: transparent; border: 0;
+  color: var(--text-secondary);
+  padding: 8px 14px;
+  min-height: 36px;
+  border-radius: 999px;
+  font-weight: 700; font-size: 13px;
+  white-space: nowrap;
+  transition: background .15s, color .15s;
+}
+.sub-tabs button:hover { color: var(--text-primary); }
+.sub-tabs button[aria-current="true"] {
+  background: var(--brand);
+  color: #0A0A0A;
+}
+
+.filter-bar {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  margin-top: 12px;
+}
+.filter-bar button {
+  background: var(--card-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px; font-weight: 600;
+  min-height: 32px;
+  transition: border-color .15s, color .15s;
+}
+.filter-bar button:hover { color: var(--text-primary); border-color: var(--brand); }
+.filter-bar button[aria-pressed="true"] {
+  background: var(--brand-soft);
+  color: var(--brand-text);
+  border-color: var(--brand);
+}
+
+.match-list {
+  display: flex; flex-direction: column; gap: 10px;
+  margin-top: 14px;
+}
+.match-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: 14px;
+  display: grid; gap: 10px;
+}
+.match-card .head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; flex-wrap: wrap;
+  font-size: 12px; color: var(--text-muted);
+}
+.match-card .comp-chip {
+  font-size: 10px; font-weight: 800;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 999px;
+  background: var(--card-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+.match-card .comp-chip.urc       { color: var(--brand-text); border-color: color-mix(in srgb, var(--brand) 40%, transparent); }
+.match-card .comp-chip.challenge { color: var(--heritage-blue); border-color: color-mix(in srgb, var(--heritage-blue) 40%, transparent); }
+.match-card .body {
+  display: grid; grid-template-columns: 1fr auto 1fr;
+  gap: 8px; align-items: center;
+}
+.match-card .team {
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px;
+}
+.match-card .badge {
+  width: 44px; height: 44px;
+  border-radius: 10px;
+  background: var(--card-elevated);
+  border: 1px solid var(--border);
+  display: grid; place-items: center;
+  font-weight: 800; font-size: 12px; letter-spacing: 0.04em;
+}
+.match-card .badge.home { background: var(--brand-soft); color: var(--brand-text); border-color: color-mix(in srgb, var(--brand) 40%, transparent); }
+.match-card .team-name { font-weight: 700; font-size: 13px; }
+.match-card .center { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.match-card .score {
+  font-weight: 800; font-size: 22px; letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.match-card .vs { color: var(--text-muted); font-weight: 700; font-size: 14px; }
+.match-card .result-tag {
+  font-size: 10px; font-weight: 800;
+  letter-spacing: 0.08em; text-transform: uppercase;
+}
+.match-card .result-tag.W { color: var(--success); }
+.match-card .result-tag.L { color: var(--danger); }
+.match-card .result-tag.D { color: var(--draw); }
+.match-card .meta {
+  font-size: 12px; color: var(--text-muted);
+  display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;
+}
+.match-card .tries {
+  font-size: 12px; color: var(--text-secondary);
+  border-top: 1px dashed var(--border);
+  padding-top: 8px;
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.match-card .tries .label {
+  color: var(--text-muted); font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em; font-size: 10px;
+  margin-right: 4px;
+}
+
+/* Standings table */
+.standings-wrap {
+  margin-top: 14px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.standings {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  min-width: 640px;
+}
+.standings thead th {
+  background: var(--card-elevated);
+  color: var(--text-secondary);
+  text-align: right;
+  padding: 10px 8px;
+  font-weight: 800; font-size: 11px;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  position: sticky; top: 0;
+}
+.standings thead th[scope="col"]:first-child,
+.standings thead th[scope="col"]:nth-child(2) { text-align: left; }
+.standings thead th:hover { color: var(--text-primary); }
+.standings thead th[aria-sort="ascending"]::after  { content: " ▲"; color: var(--brand-text); }
+.standings thead th[aria-sort="descending"]::after { content: " ▼"; color: var(--brand-text); }
+.standings tbody td {
+  padding: 10px 8px;
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+.standings tbody td:first-child { width: 40px; color: var(--text-muted); font-weight: 700; }
+.standings tbody td:nth-child(2) { text-align: left; font-weight: 600; }
+.standings tbody tr:last-child td { border-bottom: 0; }
+.standings tbody tr.is-ospreys {
+  background: var(--brand-soft);
+}
+.standings tbody tr.is-ospreys td:first-child { color: var(--brand-text); }
+.standings tbody tr.is-ospreys td:nth-child(2) { color: var(--brand-text); font-weight: 800; }
+.standings .pts { font-weight: 800; }
+
+.section-foot-note {
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* =========================================================================
+   PHASE 4 — History · Honours · Head-to-Head · Season records
+   ========================================================================= */
+
+/* Era timeline */
+.timeline-list {
+  display: flex; flex-direction: column;
+  margin-top: 16px;
+  position: relative;
+}
+.timeline-list::before {
+  content: ""; position: absolute;
+  left: 6px; top: 4px; bottom: 4px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--brand) 0%, color-mix(in srgb, var(--brand) 25%, transparent) 100%);
+  border-radius: 2px;
+}
+.era {
+  position: relative;
+  padding: 4px 0 18px 28px;
+}
+.era::before {
+  content: ""; position: absolute;
+  left: 0; top: 8px;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 3px solid var(--brand);
+  box-shadow: 0 0 0 4px var(--bg);
+}
+.era .years {
+  font-size: 11px; font-weight: 800;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--brand-text);
+}
+.era h3 { font-size: 16px; margin-top: 4px; }
+.era p { margin: 6px 0 0; color: var(--text-secondary); font-size: 14px; }
+.era .era-stats {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin-top: 8px;
+}
+.era .era-stats .chip { background: var(--card-elevated); }
+
+/* Season-by-season records */
+.records-wrap {
+  margin-top: 14px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.records {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  min-width: 720px;
+}
+.records thead th {
+  background: var(--card-elevated);
+  color: var(--text-secondary);
+  text-align: right;
+  padding: 10px 8px;
+  font-weight: 800; font-size: 11px;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  position: sticky; top: 0;
+}
+.records thead th:first-child,
+.records thead th[scope="col"]:nth-child(2),
+.records thead th.left { text-align: left; }
+.records tbody td {
+  padding: 9px 8px;
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.records tbody td:first-child { font-weight: 700; color: var(--text-primary); text-align: left; }
+.records tbody td.left { text-align: left; }
+.records tbody tr:last-child td { border-bottom: 0; }
+.records tbody tr.title-year td:first-child::after {
+  content: " ★"; color: var(--brand-text);
+}
+.records tbody tr.title-year { background: var(--brand-soft); }
+
+/* Honours */
+.trophy-grid {
+  display: grid; gap: 12px;
+  grid-template-columns: 1fr;
+  margin-top: 14px;
+}
+@media (min-width: 600px) { .trophy-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1024px) { .trophy-grid { grid-template-columns: repeat(3, 1fr); } }
+.trophy {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.trophy .ic {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  background: var(--brand-soft); color: var(--brand-text);
+  display: grid; place-items: center;
+}
+.trophy h3 { margin: 0; font-size: 16px; }
+.trophy .when { color: var(--brand-text); font-weight: 800; font-size: 13px; letter-spacing: -0.01em; }
+.trophy .desc { color: var(--text-secondary); font-size: 13px; margin: 0; }
+.trophy .meta { font-size: 12px; color: var(--text-muted); }
+
+.lions-list {
+  display: grid; gap: 8px;
+  grid-template-columns: 1fr;
+  margin-top: 12px;
+}
+@media (min-width: 600px) { .lions-list { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 1024px) { .lions-list { grid-template-columns: 1fr 1fr 1fr; } }
+.lion-row {
+  display: grid; grid-template-columns: auto 1fr auto;
+  gap: 10px; align-items: center;
+  padding: 10px 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.lion-row .yr {
+  font-weight: 800; font-size: 13px;
+  color: var(--brand-text); letter-spacing: -0.01em;
+}
+.lion-row .nm { font-weight: 700; font-size: 13px; }
+.lion-row .dest { font-size: 11px; color: var(--text-muted); }
+
+/* Head-to-Head table */
+.h2h-wrap {
+  margin-top: 14px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.h2h {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  min-width: 720px;
+}
+.h2h thead th {
+  background: var(--card-elevated);
+  color: var(--text-secondary);
+  padding: 10px 8px; text-align: right;
+  font-weight: 800; font-size: 11px;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  position: sticky; top: 0;
+}
+.h2h thead th.left { text-align: left; }
+.h2h tbody td {
+  padding: 9px 8px; text-align: right;
+  border-bottom: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.h2h tbody td.left { text-align: left; font-weight: 600; }
+.h2h tbody tr:last-child td { border-bottom: 0; }
+.h2h tbody tr.derby td.left {
+  position: relative; padding-left: 22px;
+}
+.h2h tbody tr.derby td.left::before {
+  content: ""; position: absolute;
+  left: 8px; top: 50%; transform: translateY(-50%);
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--brand);
+}
+.legend-bar {
+  display: flex; align-items: center; gap: 6px;
+  margin-top: 10px;
+  font-size: 11px; color: var(--text-muted);
+}
+.legend-bar .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--brand); }
+
+/* =========================================================================
+   PHASE 5 — Analytics charts (inline SVG)
+   ========================================================================= */
+.charts-grid {
+  display: grid; gap: 14px;
+  grid-template-columns: 1fr;
+  margin-top: 14px;
+}
+@media (min-width: 1024px) { .charts-grid { grid-template-columns: 1fr 1fr; } }
+.chart-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.chart-card h3 { margin: 0; font-size: 15px; }
+.chart-card .meta { color: var(--text-muted); font-size: 12px; }
+.chart-card .legend {
+  display: flex; gap: 12px; flex-wrap: wrap;
+  font-size: 11px; color: var(--text-secondary);
+}
+.chart-card .legend span { display: inline-flex; align-items: center; gap: 6px; }
+.chart-card .legend i {
+  display: inline-block; width: 10px; height: 10px;
+  border-radius: 2px;
+}
+.chart-svg {
+  width: 100%; height: auto;
+  font-family: inherit;
+}
+.chart-svg .axis text {
+  font-size: 10px;
+  fill: var(--text-muted);
+}
+.chart-svg .axis line,
+.chart-svg .grid line {
+  stroke: var(--border);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+.chart-svg .grid line { stroke-dasharray: 2 2; opacity: 0.55; }
+.chart-svg .bar {
+  fill: var(--text-secondary);
+  transition: fill .12s;
+}
+.chart-svg .bar.brand { fill: var(--brand); }
+.chart-svg .bar.title { fill: var(--brand); }
+.chart-svg .bar:hover, .chart-svg .bar:focus { fill: var(--brand-hover); }
+.chart-svg .line {
+  fill: none;
+  stroke: var(--brand);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.chart-svg .line.alt { stroke: var(--heritage-blue); }
+.chart-svg .dot { fill: var(--brand); stroke: var(--bg); stroke-width: 1.5; }
+.chart-svg .dot.alt { fill: var(--heritage-blue); }
+.chart-svg .dot.title { fill: var(--brand); stroke: var(--bg); stroke-width: 2; }
+.chart-svg text.value {
+  font-size: 9px; font-weight: 700;
+  fill: var(--text-primary);
+}
+.chart-svg .label-x {
+  font-size: 9px; fill: var(--text-muted);
+}
+.chart-svg .h-bar {
+  fill: var(--brand-soft);
+  stroke: var(--brand);
+  stroke-width: 1;
+}
+.chart-svg .h-bar-fill {
+  fill: var(--brand);
+}
+.chart-svg .h-name {
+  font-size: 11px; font-weight: 600;
+  fill: var(--text-primary);
+}
+.chart-svg .h-val {
+  font-size: 11px; font-weight: 800;
+  fill: var(--text-primary);
+}
+
+/* =========================================================================
+   PHASE 6 — Coaches + Venue
+   ========================================================================= */
+.coach-grid {
+  display: grid; gap: 12px;
+  grid-template-columns: 1fr;
+  margin-top: 14px;
+}
+@media (min-width: 600px) { .coach-grid { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 1024px) { .coach-grid { grid-template-columns: repeat(3, 1fr); } }
+.coach-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.coach-card.current { border-color: var(--brand); }
+.coach-card .head { display: flex; align-items: center; gap: 12px; }
+.coach-card .avatar {
+  width: 52px; height: 52px; flex: 0 0 52px;
+  border-radius: 12px;
+  background: var(--brand-soft); color: var(--brand-text);
+  display: grid; place-items: center;
+  font-weight: 800; font-size: 14px; letter-spacing: 0.04em;
+}
+.coach-card h3 { margin: 0; font-size: 15px; }
+.coach-card .tenure { color: var(--brand-text); font-weight: 800; font-size: 12px; letter-spacing: 0.04em; }
+.coach-card .meta { color: var(--text-muted); font-size: 12px; }
+.coach-card .stats {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.coach-card .stats div { text-align: center; }
+.coach-card .stats .v { font-size: 16px; font-weight: 800; }
+.coach-card .stats .k { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.coach-card p { margin: 0; color: var(--text-secondary); font-size: 13px; }
+.coach-card .trophies {
+  display: flex; flex-wrap: wrap; gap: 4px;
+}
+.coach-card .trophies .chip { background: var(--brand-soft); color: var(--brand-text); border-color: color-mix(in srgb, var(--brand) 40%, transparent); }
+
+/* Venue */
+.venue-hero {
+  position: relative;
+  background:
+    radial-gradient(circle at 80% 0%, var(--brand-soft) 0%, transparent 55%),
+    var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: 18px;
+  display: grid; gap: 14px;
+  margin-top: 14px;
+  overflow: hidden;
+}
+@media (min-width: 768px) {
+  .venue-hero { grid-template-columns: auto 1fr; align-items: start; padding: 22px; gap: 22px; }
+}
+.venue-illustration {
+  width: 100%; max-width: 220px;
+  aspect-ratio: 16 / 10;
+  border-radius: 12px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  display: grid; place-items: center;
+  padding: 8px;
+}
+.venue-illustration svg { width: 100%; height: 100%; }
+.venue-hero h3 { margin: 0 0 4px 0; font-size: 18px; }
+.venue-hero .alias { color: var(--text-muted); font-size: 12px; }
+.venue-hero p { color: var(--text-secondary); font-size: 14px; margin: 8px 0 0; }
+.venue-stats {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
+  margin-top: 12px;
+}
+@media (min-width: 600px) { .venue-stats { grid-template-columns: repeat(4, 1fr); } }
+.venue-stat {
+  background: var(--card-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.venue-stat .v { font-size: 18px; font-weight: 800; line-height: 1.1; letter-spacing: -0.01em; }
+.venue-stat .k { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 4px; }
+
+.heritage-grid {
+  display: grid; gap: 12px;
+  grid-template-columns: 1fr;
+  margin-top: 14px;
+}
+@media (min-width: 768px) { .heritage-grid { grid-template-columns: 1fr 1fr; } }
+.heritage-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.heritage-card .ic {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  background: var(--brand-soft); color: var(--brand-text);
+  display: grid; place-items: center;
+}
+.heritage-card h3 { margin: 0; font-size: 15px; }
+.heritage-card .tag-line { color: var(--brand-text); font-size: 12px; font-weight: 700; letter-spacing: 0.04em; }
+.heritage-card p { color: var(--text-secondary); font-size: 13px; margin: 0; }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+</style>
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to main content</a>
+
+<header class="app-header">
+  <div class="header-inner">
+    <button class="brand-lock" type="button" aria-label="Ospreylia FanView home" data-tab="home">
+      <!-- Original fan-safe SVG: shield silhouette + dual chevron feathers (wing motif). NOT the official Ospreys crest. -->
+      <svg class="emblem" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+        <path d="M32 4 L55 13 V30 Q55 47 32 60 Q9 47 9 30 V13 Z"
+              fill="var(--surface-1)" stroke="#F47920" stroke-width="2"/>
+        <path d="M19 33 L32 20 L45 33"
+              stroke="#F47920" stroke-width="3.5" fill="none"
+              stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M22 45 L32 35 L42 45"
+              stroke="#F47920" stroke-width="3" fill="none"
+              stroke-linecap="round" stroke-linejoin="round" opacity=".55"/>
+      </svg>
+      <span class="brand-text">
+        <span class="brand-name">Ospreylia FanView</span>
+        <span class="brand-sub">Built by fans, for fans</span>
+      </span>
+    </button>
+
+    <span aria-hidden="true"></span>
+
+    <div class="header-actions">
+      <button id="searchTrigger" class="search-trigger" type="button" aria-label="Open search" aria-haspopup="dialog">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <span class="label" data-i18n="searchPlaceholder">Search squad, legends…</span>
+      </button>
+      <button id="langToggle" class="icon-btn lang-btn" type="button" aria-label="Switch to Welsh">
+        <span id="langLabel" aria-hidden="true">EN</span>
+      </button>
+      <button id="themeToggle" class="icon-btn" type="button" aria-label="Switch to light mode" aria-pressed="false">
+        <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"/>
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<nav class="desktop-nav" aria-label="Primary">
+  <div class="desktop-nav-inner" role="tablist">
+    <button type="button" data-tab="home"      aria-current="page" data-i18n="navHome">Home</button>
+    <button type="button" data-tab="squad"     data-i18n="navSquad">Squad</button>
+    <button type="button" data-tab="fixtures"  data-i18n="navFixtures">Fixtures</button>
+    <button type="button" data-tab="history"   data-i18n="navHistory">History</button>
+    <button type="button" data-tab="analytics" data-i18n="navAnalytics">Analytics</button>
+    <button type="button" data-tab="legends"   data-i18n="navLegends">Legends</button>
+    <button type="button" data-tab="coaches"   data-i18n="navCoaches">Coaches</button>
+    <button type="button" data-tab="venue"     data-i18n="navVenue">Venue</button>
+    <button type="button" data-tab="h2h"       data-i18n="navH2H">Head-to-Head</button>
+    <button type="button" data-tab="honours"   data-i18n="navHonours">Honours</button>
+    <button type="button" data-tab="settings"  data-i18n="navSettings">Settings</button>
+  </div>
+</nav>
+
+<main id="main">
+
+  <!-- HOME -->
+  <section id="page-home" class="page active" aria-label="Home">
+
+    <!-- Hero -->
+    <div class="hero">
+      <div class="hero-emblem" aria-hidden="true">
+        <svg viewBox="0 0 64 64" width="64" height="64" focusable="false">
+          <path d="M32 4 L55 13 V30 Q55 47 32 60 Q9 47 9 30 V13 Z" fill="#0A0A0A" stroke="#F47920" stroke-width="2"/>
+          <path d="M19 33 L32 20 L45 33" stroke="#F47920" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M22 45 L32 35 L42 45" stroke="#F47920" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".55"/>
+        </svg>
+      </div>
+      <div>
+        <h1 data-i18n="heroTitle">Ospreylia FanView</h1>
+        <p data-i18n="heroSub">Unofficial Ospreys supporter companion. Squad, fixtures, history and analytics — built by fans, for fans.</p>
+        <div class="hero-meta">
+          <span class="chip brand" id="seasonChip">2025–26</span>
+          <span class="chip" data-i18n="urc">URC</span>
+          <span class="chip heritage" data-i18n="founded">Est. 2003</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Next match -->
+    <div class="card" aria-labelledby="next-h">
+      <span class="eyebrow" data-i18n="nextMatch">Next match</span>
+      <h2 id="next-h"><span id="nextLine">—</span></h2>
+      <div class="match">
+        <div class="side">
+          <div class="badge">OSP</div>
+          <div class="name" data-i18n="ospreys">Ospreys</div>
+        </div>
+        <div class="vs" id="nextVs">vs</div>
+        <div class="side">
+          <div class="badge" id="nextBadge">—</div>
+          <div class="name" id="nextName">—</div>
+        </div>
+      </div>
+      <div class="match-meta">
+        <span id="nextDate">—</span>
+        <span aria-hidden="true">·</span>
+        <span id="nextVenue">—</span>
+        <span aria-hidden="true">·</span>
+        <span id="nextComp">—</span>
+      </div>
+      <div class="countdown" aria-live="polite" aria-label="Time to kick-off">
+        <div><div class="n" id="cdD">0</div><div class="l" data-i18n="days">Days</div></div>
+        <div><div class="n" id="cdH">0</div><div class="l" data-i18n="hours">Hours</div></div>
+        <div><div class="n" id="cdM">0</div><div class="l" data-i18n="mins">Mins</div></div>
+        <div><div class="n" id="cdS">0</div><div class="l" data-i18n="secs">Secs</div></div>
+      </div>
+    </div>
+
+    <!-- League position -->
+    <div class="card" aria-labelledby="pos-h">
+      <span class="eyebrow" data-i18n="leaguePos">URC league position</span>
+      <h2 id="pos-h" data-i18n="urc2526">2025–26 United Rugby Championship</h2>
+      <div class="pos-row">
+        <div>
+          <div class="pos-num" id="posNum">—</div>
+          <div class="pos-label" data-i18n="ofTeams">of 16</div>
+        </div>
+        <div>
+          <div class="pos-record" id="posRecord">—</div>
+          <div class="pos-label" id="posPlayed">—</div>
+        </div>
+        <div>
+          <div class="pos-label" data-i18n="leaguePoints">League pts</div>
+          <div class="pos-record" id="posPts" style="font-size:24px; color:var(--brand-text)">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Last 5 -->
+    <div class="card" aria-labelledby="form-h">
+      <span class="eyebrow" data-i18n="last5">Last 5 results</span>
+      <h2 id="form-h" data-i18n="form">Form</h2>
+      <div class="results-row" id="last5Row" role="list" aria-label="Last 5 results, most recent first"></div>
+      <div class="results-detail" id="last5Detail"></div>
+    </div>
+
+    <!-- Season summary -->
+    <div class="card" aria-labelledby="sum-h">
+      <span class="eyebrow" data-i18n="seasonSummary">Season summary</span>
+      <h2 id="sum-h" data-i18n="ssTitle">2025–26 — to date</h2>
+      <div class="stat-grid" id="seasonStats"></div>
+    </div>
+
+    <!-- Teasers: history snapshot + legend spotlight -->
+    <div class="teaser-grid">
+      <button class="teaser" type="button" data-tab="history" aria-label="Open History page">
+        <span class="eyebrow" data-i18n="archive">From the archive</span>
+        <h3 data-i18n="historySnap">Club history snapshot</h3>
+        <ul class="timeline" id="historyTeaser"></ul>
+        <span class="cta" data-i18n="viewHistory">View full history →</span>
+      </button>
+      <button class="teaser" type="button" data-tab="legends" aria-label="Open Legends page">
+        <span class="eyebrow" data-i18n="legendSpotlight">Legend spotlight</span>
+        <div class="legend-row" id="legendTeaserRow"></div>
+        <div class="legend-stats" id="legendTeaserStats"></div>
+        <span class="cta" data-i18n="viewLegends">View all legends →</span>
+      </button>
+    </div>
+
+  </section>
+
+  <!-- SQUAD (placeholder) -->
+  <section id="page-squad" class="page" aria-label="Squad">
+    <div class="card">
+      <div class="empty-state">
+        <span class="icon" aria-hidden="true"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+        <h2 data-i18n="squadComing">Squad — Phase 2</h2>
+        <p data-i18n="squadComingSub">Senior squad grouped by position with appearance, try and Test-cap counts.</p>
+        <ul>
+          <li>Player cards by position</li>
+          <li>Captain, international and Lions badges</li>
+          <li>Career detail expand on every card</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- FIXTURES · RESULTS · STANDINGS -->
+  <section id="page-fixtures" class="page" aria-label="Fixtures, results and standings">
+    <div class="card">
+      <span class="eyebrow" data-i18n="fixturesLabel">Fixtures · Results · Standings</span>
+      <h2 data-i18n="fixturesTitle">2025–26 season</h2>
+
+      <div class="sub-tabs" role="tablist" aria-label="Fixtures sub-views">
+        <button type="button" data-sub="upcoming"  aria-current="true" data-i18n="subUpcoming">Fixtures</button>
+        <button type="button" data-sub="results"   data-i18n="subResults">Results</button>
+        <button type="button" data-sub="standings" data-i18n="subStandings">Standings</button>
+      </div>
+
+      <div class="filter-bar" id="fixFilters" role="group" aria-label="Filter matches">
+        <button type="button" data-filter="all" aria-pressed="true" data-i18n="filterAll">All</button>
+        <button type="button" data-filter="urc" aria-pressed="false">URC</button>
+        <button type="button" data-filter="challenge" aria-pressed="false" data-i18n="filterChallenge">Challenge Cup</button>
+        <button type="button" data-filter="home" aria-pressed="false" data-i18n="filterHome">Home</button>
+        <button type="button" data-filter="away" aria-pressed="false" data-i18n="filterAway">Away</button>
+      </div>
+
+      <div id="fixturesContent"></div>
+      <p class="section-foot-note" data-i18n="fixNote">Match data is illustrative pending verification against the official Ospreys and URC sources. Try scorers shown where known.</p>
+    </div>
+  </section>
+
+  <!-- HISTORY -->
+  <section id="page-history" class="page" aria-label="History">
+    <div class="card">
+      <span class="eyebrow" data-i18n="historyLabel">History</span>
+      <h2 data-i18n="historyTitle">Ospreys 2003 — present</h2>
+      <div class="sub-tabs" role="tablist" aria-label="History sub-views">
+        <button type="button" data-sub="timeline" aria-current="true" data-i18n="subTimeline">Timeline</button>
+        <button type="button" data-sub="records"  data-i18n="subRecords">Season records</button>
+      </div>
+      <div id="historyContent"></div>
+      <p class="section-foot-note" data-i18n="histNote">Captains, head coaches and finishing positions are best-effort. Cross-reference with the official Ospreys site for definitive figures.</p>
+    </div>
+  </section>
+
+  <!-- MORE -->
+  <section id="page-more" class="page" aria-label="More">
+    <div class="card">
+      <span class="eyebrow" data-i18n="more">More</span>
+      <h2 data-i18n="moreTitle">Explore the club</h2>
+      <div class="more-grid" style="margin-top:12px">
+        <button class="more-tile" type="button" data-tab="analytics">
+          <span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l3-3 4 4 6-8"/></svg></span>
+          <h3 data-i18n="navAnalytics">Analytics</h3>
+          <p data-i18n="moreAnalytics">Charts and trends across the seasons.</p>
+        </button>
+        <button class="more-tile" type="button" data-tab="legends">
+          <span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.39 6.95H22l-6 4.36L18.39 22 12 17.27 5.61 22 8 13.31 2 8.95h7.61z"/></svg></span>
+          <h3 data-i18n="navLegends">Legends</h3>
+          <p data-i18n="moreLegends">Iconic Ospreys players, then and now.</p>
+        </button>
+        <button class="more-tile" type="button" data-tab="coaches">
+          <span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21v-2a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+          <h3 data-i18n="navCoaches">Coaches</h3>
+          <p data-i18n="moreCoaches">Every head coach and their record.</p>
+        </button>
+        <button class="more-tile" type="button" data-tab="venue">
+          <span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 1 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+          <h3 data-i18n="navVenue">Venue</h3>
+          <p data-i18n="moreVenue">Swansea.com Stadium and historical grounds.</p>
+        </button>
+        <button class="more-tile" type="button" data-tab="h2h">
+          <span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18l4-3 4 3 4-3 4 3V3"/><path d="M9 9h6M9 13h6"/></svg></span>
+          <h3 data-i18n="navH2H">Head-to-Head</h3>
+          <p data-i18n="moreH2H">All-time records vs every opponent.</p>
+        </button>
+        <button class="more-tile" type="button" data-tab="honours">
+          <span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4"/><rect x="7" y="2" width="10" height="11" rx="2"/><path d="M17 4h3a2 2 0 0 1 2 2v3a4 4 0 0 1-4 4M7 4H4a2 2 0 0 0-2 2v3a4 4 0 0 0 4 4"/></svg></span>
+          <h3 data-i18n="navHonours">Honours</h3>
+          <p data-i18n="moreHonours">Titles, cup wins and Lions tourists.</p>
+        </button>
+        <button class="more-tile" type="button" data-tab="settings">
+          <span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V21a2 2 0 0 1-4 0v-.09a1.7 1.7 0 0 0-1.04-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.04H3a2 2 0 0 1 0-4h.09A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1.04-1.56V3a2 2 0 0 1 4 0v.09A1.7 1.7 0 0 0 15.04 4.6a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 1.56 1.04H21a2 2 0 0 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1.04z"/></svg></span>
+          <h3 data-i18n="navSettings">Settings</h3>
+          <p data-i18n="moreSettings">Theme, language and preferences.</p>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Sub-pages from More (Phase 1: polished placeholders) -->
+  <section id="page-analytics" class="page" aria-label="Analytics">
+    <div class="card">
+      <span class="eyebrow" data-i18n="analyticsLabel">Analytics</span>
+      <h2 data-i18n="analyticsTitle">Charts and trends, 2003–present</h2>
+      <p class="section-foot-note" style="margin-top:8px" data-i18n="analyticsNote">All-time try scorer and appearance figures are best-estimate aggregates. Cross-reference with the official Ospreys site for exact numbers.</p>
+      <div class="charts-grid" id="chartsGrid"></div>
+    </div>
+  </section>
+
+  <section id="page-legends" class="page" aria-label="Legends">
+    <div class="card"><div class="empty-state">
+      <span class="icon" aria-hidden="true"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.39 6.95H22l-6 4.36L18.39 22 12 17.27 5.61 22 8 13.31 2 8.95h7.61z"/></svg></span>
+      <h2 data-i18n="legComing">Legends — Phase 2</h2>
+      <p data-i18n="legComingSub">15+ Ospreys icons including Shane Williams, Alun Wyn Jones, Justin Tipuric and Dan Biggar.</p>
+      <ul>
+        <li>Career stats at Ospreys (apps, tries)</li>
+        <li>Wales / Ireland / All Blacks / Lions caps</li>
+        <li>Honours and signature highlight</li>
+      </ul>
+    </div></div>
+  </section>
+
+  <section id="page-coaches" class="page" aria-label="Coaches">
+    <div class="card">
+      <span class="eyebrow" data-i18n="coachesLabel">Coaches</span>
+      <h2 data-i18n="coachesTitle">Every Ospreys head coach</h2>
+      <p class="section-foot-note" style="margin-top:8px" data-i18n="coachesNote">Tenure dates and match counts are best-effort. Trophy attribution is to the head coach in post when the title was won.</p>
+      <div class="coach-grid" id="coachGrid"></div>
+    </div>
+  </section>
+
+  <section id="page-venue" class="page" aria-label="Venue">
+    <div class="card">
+      <span class="eyebrow" data-i18n="venueLabel">Venue</span>
+      <h2 data-i18n="venueTitle">Home of the Ospreys</h2>
+      <div id="venueMain"></div>
+      <h3 style="margin-top:18px; font-size:15px;" data-i18n="heritageGroundsTitle">Heritage grounds</h3>
+      <p style="color: var(--text-muted); font-size: 12px; margin-top: 4px;" data-i18n="heritageNote">Used in the early Ospreys era and through the merged clubs' deeper heritage.</p>
+      <div id="venueHeritage"></div>
+    </div>
+  </section>
+
+  <section id="page-h2h" class="page" aria-label="Head-to-head records">
+    <div class="card">
+      <span class="eyebrow" data-i18n="h2hLabel">Head-to-Head</span>
+      <h2 data-i18n="h2hTitle">All-time records vs every opponent</h2>
+      <div class="filter-bar" id="h2hFilters" role="group" aria-label="Filter opponents">
+        <button type="button" data-h2h="all" aria-pressed="true" data-i18n="filterAll">All</button>
+        <button type="button" data-h2h="derby" aria-pressed="false" data-i18n="filterDerby">Welsh derbies</button>
+        <button type="button" data-h2h="urc" aria-pressed="false">URC only</button>
+      </div>
+      <div id="h2hContent"></div>
+      <div class="legend-bar"><span class="dot" aria-hidden="true"></span><span data-i18n="derbyKey">Welsh derby opponent</span></div>
+      <p class="section-foot-note" data-i18n="h2hNote">Records aggregated from league play 2003–present. Counts are approximate and rounded; exact tallies vary by source.</p>
+    </div>
+  </section>
+
+  <section id="page-honours" class="page" aria-label="Honours">
+    <div class="card">
+      <span class="eyebrow" data-i18n="honoursLabel">Honours</span>
+      <h2 data-i18n="honoursTitle">Trophies, milestones and Lions tourists</h2>
+      <div id="honoursTrophies"></div>
+      <h3 style="margin-top:20px; font-size:15px;" data-i18n="lionsTouristsTitle">Lions tourists from Ospreys</h3>
+      <p style="color: var(--text-muted); font-size: 12px; margin-top: 4px;" data-i18n="lionsNote">Players selected for British &amp; Irish Lions tours while on the Ospreys roster.</p>
+      <div id="lionsList"></div>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="page-settings" class="page" aria-label="Settings">
+    <div class="card">
+      <span class="eyebrow" data-i18n="settings">Settings</span>
+      <h2 data-i18n="settingsTitle">Preferences</h2>
+      <div class="setting">
+        <div>
+          <div class="t" data-i18n="darkMode">Dark mode</div>
+          <div class="d" data-i18n="darkModeDesc">Dark backgrounds with orange accents.</div>
+        </div>
+        <button class="toggle" id="setTheme" type="button" aria-pressed="true" aria-label="Toggle dark mode"></button>
+      </div>
+      <div class="setting">
+        <div>
+          <div class="t" data-i18n="welsh">Cymraeg</div>
+          <div class="d" data-i18n="welshDesc">Bilingual labels for navigation and key sections.</div>
+        </div>
+        <button class="toggle" id="setLang" type="button" aria-pressed="false" aria-label="Toggle Welsh language"></button>
+      </div>
+      <div class="setting">
+        <div>
+          <div class="t" data-i18n="storageStatus">Local storage</div>
+          <div class="d" id="storageStatusDesc">Detecting…</div>
+        </div>
+        <span class="chip" id="storageChip">—</span>
+      </div>
+      <div class="setting">
+        <div>
+          <div class="t" data-i18n="version">Version</div>
+          <div class="d">Ospreylia FanView v1.0 — Phase 1</div>
+        </div>
+        <span class="chip">Phase 1</span>
+      </div>
+    </div>
+    <div class="card">
+      <span class="eyebrow" data-i18n="about">About</span>
+      <h2 data-i18n="aboutTitle">About Ospreylia FanView</h2>
+      <p style="color: var(--text-secondary); font-size: 14px;" data-i18n="aboutBody">Ospreylia FanView is an unofficial fan companion for Ospreys Rugby supporters. All data is embedded — the app works fully offline once loaded. Not associated with Ospreys Rugby, the URC or the WRU.</p>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p class="built" data-i18n="footerBuilt">Built by fans, for fans.</p>
+  <p style="margin-top:6px" data-i18n="disclaimer">This is an unofficial fan site and is not associated with Ospreys Rugby, the URC or the WRU.</p>
+  <p style="margin-top:6px" data-i18n="dataLine">Data sources: ospreysrugby.com · unitedrugby.com · ultimaterugby.com · espn.co.uk/rugby</p>
+</footer>
+
+<nav class="bottom-nav" aria-label="Primary mobile">
+  <button type="button" data-tab="home" aria-current="page">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/></svg>
+    <span data-i18n="navHome">Home</span>
+  </button>
+  <button type="button" data-tab="squad">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="7" r="4"/><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <span data-i18n="navSquad">Squad</span>
+  </button>
+  <button type="button" data-tab="fixtures">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+    <span data-i18n="navFixtures">Fixtures</span>
+  </button>
+  <button type="button" data-tab="history">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8v4l2.5 2.5"/><circle cx="12" cy="12" r="9"/></svg>
+    <span data-i18n="navHistory">History</span>
+  </button>
+  <button type="button" data-tab="more">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
+    <span data-i18n="navMore">More</span>
+  </button>
+</nav>
+
+<!-- Search overlay (dialog) -->
+<div class="search-overlay" id="searchOverlay" role="dialog" aria-modal="true" aria-labelledby="searchLabel">
+  <div class="search-panel">
+    <div class="field">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input type="search" id="searchInput" autocomplete="off" spellcheck="false"
+             placeholder="Search squad, legends, fixtures…"
+             aria-label="Search Ospreylia FanView">
+      <button class="esc" id="searchClose" type="button" aria-label="Close search">Esc</button>
+    </div>
+    <div class="search-results" id="searchResults" role="listbox" aria-label="Search results"></div>
+    <span class="sr-only" id="searchLabel">Search across squad, legends and fixtures</span>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* =========================================================================
+   1. EMBEDDED DATA
+   All static. Structured so later phases can extend without rewrites.
+   For Phase 1 only the Home-rendered fields need to be display-accurate;
+   future phases will fill in the larger arrays.
+   ========================================================================= */
+const data = {
+  meta: {
+    name: "Ospreylia FanView",
+    tagline: "Built by fans, for fans",
+    type: "Unofficial Ospreys supporter companion",
+    teamFounded: 2003,
+    region: "Swansea / Neath",
+    venue: "Swansea.com Stadium",
+    venueOpened: 2005,
+    venueArea: "Landore, Swansea"
+  },
+
+  // 2025-26 in-season — placeholder figures pending verification.
+  // TODO Phase 3: replace with live-end-of-season numbers from unitedrugby.com.
+  currentSeason: {
+    season: "2025–26",
+    competition: "URC",
+    teamsInLeague: 16,
+    position: 9,
+    leaguePoints: 38,
+    played: 18, won: 8, drawn: 1, lost: 9,
+    triesFor: 51, triesAgainst: 53,
+    pointsFor: 398, pointsAgainst: 405,
+    last5: [
+      { res: "W", opp: "Cardiff",   home: true,  sf: 27, sa: 19, comp: "URC", date: "2026-04-25" },
+      { res: "L", opp: "Leinster",  home: false, sf: 17, sa: 31, comp: "URC", date: "2026-04-18" },
+      { res: "W", opp: "Dragons",   home: true,  sf: 33, sa: 22, comp: "URC", date: "2026-03-28" },
+      { res: "D", opp: "Edinburgh", home: false, sf: 21, sa: 21, comp: "URC", date: "2026-03-21" },
+      { res: "L", opp: "Munster",   home: false, sf: 14, sa: 24, comp: "URC", date: "2026-03-14" }
+    ]
+  },
+
+  // Fixtures: 2025-26 season — illustrative pending verification.
+  // status: "result" (played) or "upcoming". For results: sf/sa scores + tries[].
+  // comp tags: "URC" or "Challenge Cup".
+  fixtures: [
+    // RESULTS (most recent listed first by Date desc when rendered)
+    { id: "r01", date: "2025-09-26", opp: "Munster",  home: true,  venue: "Swansea.com Stadium",     comp: "URC", round: "R1",  status: "result", sf: 19, sa: 21, tries: ["Giles", "Morgan-Williams"] },
+    { id: "r02", date: "2025-10-04", opp: "Bulls",    home: false, venue: "Loftus Versfeld",          comp: "URC", round: "R2",  status: "result", sf: 17, sa: 31, tries: ["Morris", "Watkin"] },
+    { id: "r03", date: "2025-10-25", opp: "Cardiff",  home: true,  venue: "Swansea.com Stadium",     comp: "URC", round: "R5",  status: "result", sf: 26, sa: 17, tries: ["Lake", "K. Williams", "Giles"] },
+    { id: "r04", date: "2025-11-29", opp: "Glasgow",  home: true,  venue: "Swansea.com Stadium",     comp: "URC", round: "R7",  status: "result", sf: 24, sa: 20, tries: ["Morris", "Cross", "Giles"] },
+    { id: "r05", date: "2025-12-13", opp: "Connacht", home: false, venue: "The Sportsground",        comp: "URC", round: "R8",  status: "result", sf: 14, sa: 22, tries: ["Lake", "Edwards"] },
+    { id: "r06", date: "2025-12-26", opp: "Dragons",  home: false, venue: "Rodney Parade",            comp: "URC", round: "R9",  status: "result", sf: 27, sa: 24, tries: ["Giles", "Watkin", "Nagy"] },
+    { id: "r07", date: "2026-01-03", opp: "Scarlets", home: false, venue: "Parc y Scarlets",          comp: "URC", round: "R10", status: "result", sf: 12, sa: 20, tries: ["Beard", "Morgan"] },
+    { id: "r08", date: "2026-01-17", opp: "Bayonne",  home: true,  venue: "Swansea.com Stadium",     comp: "Challenge Cup", round: "P1", status: "result", sf: 38, sa: 17, tries: ["Giles","Kasende","Morris","K. Williams","Edwards"] },
+    { id: "r09", date: "2026-01-25", opp: "Toulon",   home: false, venue: "Stade Mayol",              comp: "Challenge Cup", round: "P2", status: "result", sf: 14, sa: 38, tries: ["Morris","Lake"] },
+    { id: "r10", date: "2026-02-21", opp: "Stormers", home: true,  venue: "Swansea.com Stadium",     comp: "URC", round: "R11", status: "result", sf: 22, sa: 22, tries: ["Watkin", "Cross"] },
+    { id: "r11", date: "2026-03-01", opp: "Sharks",   home: false, venue: "Hollywoodbets Kings Park", comp: "URC", round: "R12", status: "result", sf: 9,  sa: 36, tries: ["Lake"] },
+    { id: "r12", date: "2026-03-14", opp: "Munster",  home: false, venue: "Thomond Park",             comp: "URC", round: "R13", status: "result", sf: 14, sa: 24, tries: ["Morris", "Beard"] },
+    { id: "r13", date: "2026-03-21", opp: "Edinburgh",home: false, venue: "Hive Stadium",             comp: "URC", round: "R14", status: "result", sf: 21, sa: 21, tries: ["Giles", "K. Williams", "Watkin"] },
+    { id: "r14", date: "2026-03-28", opp: "Dragons",  home: true,  venue: "Swansea.com Stadium",     comp: "URC", round: "R15", status: "result", sf: 33, sa: 22, tries: ["Cross","Morgan","Giles","Kasende"] },
+    { id: "r15", date: "2026-04-18", opp: "Leinster", home: false, venue: "Aviva Stadium",            comp: "URC", round: "R16", status: "result", sf: 17, sa: 31, tries: ["Lake","Edwards"] },
+    { id: "r16", date: "2026-04-25", opp: "Cardiff",  home: true,  venue: "Swansea.com Stadium",     comp: "URC", round: "R17", status: "result", sf: 27, sa: 19, tries: ["K. Williams","Watkin","Giles"] },
+    // UPCOMING
+    { id: "u01", date: "2026-05-10", opp: "Scarlets", home: true,  venue: "Swansea.com Stadium",     comp: "URC", round: "R18", status: "upcoming", kickoffISO: "2026-05-10T17:30:00+01:00" },
+    { id: "u02", date: "2026-05-17", opp: "Ulster",   home: false, venue: "Kingspan Stadium",         comp: "URC", round: "R19", status: "upcoming", kickoffISO: "2026-05-17T15:00:00+01:00" },
+    { id: "u03", date: "2026-05-24", opp: "Benetton", home: true,  venue: "Swansea.com Stadium",     comp: "URC", round: "R20", status: "upcoming", kickoffISO: "2026-05-24T17:30:00+01:00" }
+  ],
+
+  // 2025-26 URC standings — illustrative ordering pending verification.
+  // pd = points difference (TF*5 + cards stuff is league-points-only here).
+  // bp = bonus points. pts = league pts.
+  standings: [
+    { team: "Leinster",          p: 17, w: 14, d: 0, l: 3,  tf: 78, ta: 38, pf: 538, pa: 312, bp: 12, pts: 68 },
+    { team: "Bulls",             p: 17, w: 13, d: 1, l: 3,  tf: 70, ta: 41, pf: 482, pa: 320, bp: 11, pts: 65 },
+    { team: "Stormers",          p: 17, w: 12, d: 1, l: 4,  tf: 72, ta: 45, pf: 498, pa: 360, bp: 11, pts: 61 },
+    { team: "Glasgow Warriors",  p: 17, w: 11, d: 1, l: 5,  tf: 68, ta: 47, pf: 462, pa: 372, bp: 10, pts: 56 },
+    { team: "Munster",           p: 17, w: 10, d: 1, l: 6,  tf: 60, ta: 49, pf: 410, pa: 360, bp: 8,  pts: 50 },
+    { team: "Sharks",            p: 17, w: 10, d: 0, l: 7,  tf: 64, ta: 52, pf: 452, pa: 388, bp: 9,  pts: 49 },
+    { team: "Cardiff",           p: 17, w: 9,  d: 1, l: 7,  tf: 58, ta: 55, pf: 408, pa: 392, bp: 7,  pts: 45 },
+    { team: "Connacht",          p: 17, w: 8,  d: 2, l: 7,  tf: 56, ta: 57, pf: 388, pa: 402, bp: 7,  pts: 41 },
+    { team: "Ospreys",           p: 17, w: 7,  d: 1, l: 9,  tf: 49, ta: 51, pf: 372, pa: 391, bp: 8,  pts: 38, isOspreys: true },
+    { team: "Edinburgh",         p: 17, w: 7,  d: 2, l: 8,  tf: 51, ta: 59, pf: 376, pa: 412, bp: 6,  pts: 38 },
+    { team: "Lions",             p: 17, w: 7,  d: 0, l: 10, tf: 55, ta: 62, pf: 390, pa: 432, bp: 7,  pts: 35 },
+    { team: "Ulster",            p: 17, w: 6,  d: 1, l: 10, tf: 50, ta: 64, pf: 360, pa: 442, bp: 6,  pts: 32 },
+    { team: "Scarlets",          p: 17, w: 5,  d: 1, l: 11, tf: 46, ta: 66, pf: 340, pa: 472, bp: 7,  pts: 29 },
+    { team: "Benetton",          p: 17, w: 5,  d: 0, l: 12, tf: 42, ta: 70, pf: 320, pa: 488, bp: 5,  pts: 25 },
+    { team: "Dragons",           p: 17, w: 4,  d: 0, l: 13, tf: 38, ta: 75, pf: 290, pa: 502, bp: 4,  pts: 20 },
+    { team: "Zebre",             p: 17, w: 2,  d: 1, l: 14, tf: 34, ta: 80, pf: 268, pa: 540, bp: 3,  pts: 13 }
+  ],
+
+  // History snapshot for Home teaser
+  historySnapshot: [
+    { year: 2003, fact: "Ospreys formed (Neath + Swansea regional merger)" },
+    { year: 2005, fact: "First Celtic League title" },
+    { year: 2006, fact: "Beat Australia 24–16 at the Liberty" },
+    { year: 2008, fact: "Anglo-Welsh Cup at Twickenham" },
+    { year: 2012, fact: "Pro12 champions — fourth league title" }
+  ],
+
+  // Legend spotlight seed — rotates daily for variety. Full Legends in Phase 2.
+  legendSpotlight: [
+    {
+      name: "Shane Williams", pos: "Wing", era: "2003–2011",
+      apps: 200, tries: 80, intlCaps: 87,
+      blurb: "Wales' all-time top try scorer."
+    },
+    {
+      name: "Alun Wyn Jones", pos: "Lock", era: "2006–2023",
+      apps: 250, tries: 14, intlCaps: 158,
+      blurb: "Most-capped men's international rugby player."
+    },
+    {
+      name: "Justin Tipuric", pos: "Openside flanker", era: "2008–2024",
+      apps: 230, tries: 18, intlCaps: 93,
+      blurb: "Sevens-style flanker, 2× Pro12 winner."
+    },
+    {
+      name: "Dan Biggar", pos: "Fly-half", era: "2008–2022",
+      apps: 230, tries: 25, intlCaps: 112,
+      blurb: "Wales' record points scorer at his retirement."
+    }
+  ],
+
+  // ---- Future-phase shells (architecture only — fill in later phases) ----
+  squad:        { props: [], hookers: [], locks: [], backRow: [], scrumHalves: [], flyHalves: [], centres: [], backThree: [] },
+  legends:      [],   // Phase 2 — full 15+ profiles
+
+  // ---- Phase 6: Coaches ----
+  // Match totals are estimates derived from seasonRecords; update with verified numbers when available.
+  coaches: [
+    {
+      name: "Lyn Jones",        tenure: "2003–2008", current: false,
+      matches: 102, w: 60, d: 2, l: 40, winPct: 59,
+      trophies: ["Celtic League 2004–05", "Magners League 2006–07", "Anglo-Welsh Cup 2008"],
+      era: "The architect — built Ospreys' identity from scratch.",
+      style: "Pragmatic forward-led rugby with elite scrummaging. Trusted youth (Hook, Henson, Williams) and lifted three trophies in five seasons."
+    },
+    {
+      name: "Sean Holley",      tenure: "2008–2010", current: false,
+      matches: 60,  w: 36, d: 2, l: 22, winPct: 60,
+      trophies: ["Magners League 2009–10"],
+      era: "Continuity — promoted from within.",
+      style: "Refined the existing system. Steered the side to a third league title in 2009–10 with a settled, experienced squad."
+    },
+    {
+      name: "Scott Johnson",    tenure: "2010–2012", current: false,
+      matches: 44,  w: 22, d: 1, l: 21, winPct: 50,
+      trophies: [],
+      era: "Director of Rugby with a hands-on role. Brief tenure before Tandy era.",
+      style: "Australian coach who set up the structures that delivered the 2011–12 title under his successor."
+    },
+    {
+      name: "Steve Tandy",      tenure: "2012–2018", current: false,
+      matches: 130, w: 76, d: 1, l: 53, winPct: 58,
+      trophies: ["Pro12 2011–12 (interim head)"],
+      era: "The longest tenure — title peak then steady decline.",
+      style: "Took the head role at 31 and won the Pro12 in his first season via the famous 31–30 RDS final. Champions Cup quarter-final in 2014–15."
+    },
+    {
+      name: "Allen Clarke",     tenure: "2018–2020", current: false,
+      matches: 36,  w: 12, d: 1, l: 23, winPct: 33,
+      trophies: [],
+      era: "Difficult rebuild years.",
+      style: "Took over a thinning squad with senior internationals on the way out. Departed mid-season as results dropped."
+    },
+    {
+      name: "Toby Booth",       tenure: "2020–2024", current: false,
+      matches: 80,  w: 36, d: 1, l: 43, winPct: 45,
+      trophies: [],
+      era: "URC era — stabiliser and cultivator.",
+      style: "Defence-first English coach who restored competitiveness, blooded young Welsh talent and reached the URC and Champions Cup knockouts."
+    },
+    {
+      name: "Mark Jones",       tenure: "2024–present", current: true,
+      matches: 35,  w: 14, d: 2, l: 19, winPct: 40,
+      trophies: [],
+      era: "Current era — Welsh-led rebuild around Jac Morgan.",
+      style: "Former Ospreys academy coach turned head coach. Backs-friendly approach with attacking width and an emphasis on Welsh-trained talent."
+    }
+  ],
+
+  // ---- Phase 6: Venue ----
+  venue: {
+    main: {
+      name: "Swansea.com Stadium",
+      alias: "formerly the Liberty Stadium",
+      capacity: "20,827",
+      opened: 2005,
+      area: "Landore, Swansea",
+      shared: "Swansea City AFC",
+      city: "Swansea (Abertawe)",
+      desc: "The Swansea.com Stadium opened in 2005, replacing the Vetch Field and St Helen's as the city's primary spectator venue. Built on the former Morfa Athletics Stadium site in Landore, it is shared between the Ospreys and Swansea City AFC. Renamed from the Liberty Stadium in 2021 following a sponsorship change. Capacity figures vary slightly by source — 20,827 is the commonly cited rugby/football capacity."
+    },
+    heritage: [
+      { name: "St Helen's",
+        tag: "Swansea heritage",
+        years: "Used 2003–2005",
+        desc: "Historic ground in Mumbles Road, Swansea. Long-time home of Swansea RFC, one of the merger clubs that formed the Ospreys. Famous as the venue where Garry Sobers struck six sixes in an over against Glamorgan in 1968. Hosted Ospreys home matches before the Liberty/Swansea.com Stadium opened." },
+      { name: "The Gnoll",
+        tag: "Neath heritage",
+        years: "Used 2003–2005",
+        desc: "Historic ground in Neath, home of Neath RFC since 1880 — the second merger club. Known for atmospheric floodlit nights and a fierce Welsh-language matchday culture. The Ospreys' first regional season split home matches between The Gnoll and St Helen's." }
+    ]
+  },
+
+  // ---- Phase 4: History eras (narrative timeline) ----
+  historyEras: [
+    { years: "2003–04", title: "Formation",
+      body: "The Ospreys are formed from the merger of Neath RFC and Swansea RFC, two of Welsh rugby's oldest clubs. Lyn Jones is appointed head coach. Early matches split between St Helen's and The Gnoll while a new home is planned.",
+      stats: ["Neath + Swansea merger", "St Helen's / The Gnoll", "Lyn Jones (HC)"] },
+    { years: "2004–07", title: "First titles & Liberty era begins",
+      body: "Ospreys lift their first Celtic League title in 2004–05 and a second in 2006–07. The Liberty Stadium opens in 2005, shared with Swansea City. The squad blends the talent of Williams, Henson, Hook and a young Alun Wyn Jones.",
+      stats: ["2004–05 Celtic League", "2006–07 Magners League", "Liberty opens 2005"] },
+    { years: "2006",  title: "Beat Australia 24–16",
+      body: "On 4 November 2006 the Ospreys defeated the touring Wallabies 24–16 at the Liberty Stadium — the first regional/club victory over a senior tier-1 nation in this era of Welsh rugby.",
+      stats: ["First-ever win vs Australia", "Liberty Stadium", "4 Nov 2006"] },
+    { years: "2008",  title: "Anglo-Welsh Cup at Twickenham",
+      body: "Ospreys complete a domestic-cup double era by winning the Anglo-Welsh Cup, beating Leicester Tigers 23–6 at Twickenham in front of a packed crowd.",
+      stats: ["Anglo-Welsh Cup", "Beat Leicester 23–6", "Twickenham"] },
+    { years: "2009–12", title: "Golden era",
+      body: "A third title in 2009–10 and a fourth in 2011–12 — the Pro12 trophy lifted at the RDS after beating Leinster in their own backyard. Ospreys are the dominant Welsh side of the era.",
+      stats: ["2009–10 Magners", "2011–12 Pro12", "Won Leinster final 31–30"] },
+    { years: "2013–20", title: "Decline and rebuild",
+      body: "The post-title cycle: senior internationals depart, league finishes drop, multiple coaching changes (Tandy, Clarke). The region pivots to academy-led development with Justin Tipuric and a young Alun Wyn Jones at the spine.",
+      stats: ["Tandy / Clarke era", "Academy-led rebuild", "Mid-table finishes"] },
+    { years: "2021–", title: "URC era",
+      body: "The league rebrands as the URC with four South African franchises added. Ospreys remain a competitive playoff-bubble side under Toby Booth, then the next coaching cycle. Jac Morgan emerges as captain and a 2025 Lions tourist.",
+      stats: ["URC launches 2021", "Toby Booth → next era", "Jac Morgan captaincy"] }
+  ],
+
+  // ---- Phase 4: Season-by-season records (best-effort, 2003-04 to 2025-26) ----
+  // Schema: season, comp, p, w, d, l, pf, pa, pos, captain, coach, europe
+  seasonRecords: [
+    { season: "2003–04", comp: "Celtic League",   p: 22, w: 13, d: 0, l: 9,  pf: 540, pa: 460, pos: 5,  captain: "Barry Williams",   coach: "Lyn Jones",                 europe: "Heineken — pool stage", titleYear: false },
+    { season: "2004–05", comp: "Celtic League",   p: 22, w: 14, d: 0, l: 8,  pf: 580, pa: 430, pos: 1,  captain: "Barry Williams",   coach: "Lyn Jones",                 europe: "Heineken — pool stage", titleYear: true  },
+    { season: "2005–06", comp: "Celtic League",   p: 20, w: 9,  d: 1, l: 10, pf: 470, pa: 470, pos: 5,  captain: "Ryan Jones",       coach: "Lyn Jones",                 europe: "Heineken — pool stage", titleYear: false },
+    { season: "2006–07", comp: "Magners League",  p: 20, w: 13, d: 0, l: 7,  pf: 560, pa: 440, pos: 1,  captain: "Ryan Jones",       coach: "Lyn Jones",                 europe: "Heineken — quarters",   titleYear: true  },
+    { season: "2007–08", comp: "Magners League",  p: 18, w: 11, d: 1, l: 6,  pf: 490, pa: 410, pos: 4,  captain: "Ryan Jones",       coach: "Lyn Jones",                 europe: "Anglo-Welsh Cup winners", titleYear: false },
+    { season: "2008–09", comp: "Magners League",  p: 18, w: 11, d: 1, l: 6,  pf: 510, pa: 420, pos: 3,  captain: "Ryan Jones",       coach: "Sean Holley",               europe: "Heineken — quarters",   titleYear: false },
+    { season: "2009–10", comp: "Magners League",  p: 18, w: 13, d: 1, l: 4,  pf: 540, pa: 380, pos: 1,  captain: "Ryan Jones",       coach: "Sean Holley / Scott Johnson", europe: "Heineken — pool stage", titleYear: true },
+    { season: "2010–11", comp: "Magners League",  p: 22, w: 11, d: 1, l: 10, pf: 530, pa: 480, pos: 6,  captain: "Ryan Jones",       coach: "Scott Johnson",             europe: "Heineken — pool stage", titleYear: false },
+    { season: "2011–12", comp: "Pro12",           p: 22, w: 14, d: 0, l: 8,  pf: 590, pa: 450, pos: 1,  captain: "Alun Wyn Jones",   coach: "Steve Tandy",               europe: "Heineken — pool stage", titleYear: true  },
+    { season: "2012–13", comp: "Pro12",           p: 22, w: 12, d: 0, l: 10, pf: 540, pa: 460, pos: 5,  captain: "Alun Wyn Jones",   coach: "Steve Tandy",               europe: "Heineken — pool stage", titleYear: false },
+    { season: "2013–14", comp: "Pro12",           p: 22, w: 13, d: 0, l: 9,  pf: 560, pa: 470, pos: 4,  captain: "Alun Wyn Jones",   coach: "Steve Tandy",               europe: "Heineken — pool stage", titleYear: false },
+    { season: "2014–15", comp: "Pro12",           p: 22, w: 14, d: 1, l: 7,  pf: 580, pa: 440, pos: 3,  captain: "Alun Wyn Jones",   coach: "Steve Tandy",               europe: "Champions Cup — quarters", titleYear: false },
+    { season: "2015–16", comp: "Pro12",           p: 22, w: 11, d: 1, l: 10, pf: 530, pa: 480, pos: 7,  captain: "Alun Wyn Jones",   coach: "Steve Tandy",               europe: "Champions Cup — pool stage", titleYear: false },
+    { season: "2016–17", comp: "Pro12",           p: 22, w: 13, d: 1, l: 8,  pf: 560, pa: 460, pos: 4,  captain: "Alun Wyn Jones",   coach: "Steve Tandy",               europe: "Champions Cup — pool stage", titleYear: false },
+    { season: "2017–18", comp: "Pro14",           p: 21, w: 10, d: 1, l: 10, pf: 510, pa: 480, pos: 9,  captain: "Alun Wyn Jones",   coach: "Steve Tandy / A. Clarke",   europe: "Champions Cup — pool stage", titleYear: false },
+    { season: "2018–19", comp: "Pro14",           p: 21, w: 7,  d: 1, l: 13, pf: 460, pa: 540, pos: 12, captain: "Alun Wyn Jones",   coach: "Allen Clarke",              europe: "Champions Cup — pool stage", titleYear: false },
+    { season: "2019–20", comp: "Pro14",           p: 13, w: 3,  d: 0, l: 10, pf: 280, pa: 420, pos: 13, captain: "Justin Tipuric",   coach: "Allen Clarke / interim",    europe: "Champions Cup — pool stage", titleYear: false },
+    { season: "2020–21", comp: "Pro14 / Rainbow", p: 16, w: 7,  d: 1, l: 8,  pf: 360, pa: 380, pos: 7,  captain: "Justin Tipuric",   coach: "Toby Booth",                europe: "Challenge Cup — pool",   titleYear: false },
+    { season: "2021–22", comp: "URC",             p: 18, w: 10, d: 0, l: 8,  pf: 460, pa: 440, pos: 6,  captain: "Justin Tipuric",   coach: "Toby Booth",                europe: "Champions Cup — Round of 16", titleYear: false },
+    { season: "2022–23", comp: "URC",             p: 18, w: 11, d: 0, l: 7,  pf: 480, pa: 420, pos: 5,  captain: "Justin Tipuric",   coach: "Toby Booth",                europe: "Champions Cup — quarters", titleYear: false },
+    { season: "2023–24", comp: "URC",             p: 18, w: 8,  d: 1, l: 9,  pf: 430, pa: 460, pos: 9,  captain: "Jac Morgan",       coach: "Toby Booth",                europe: "Challenge Cup — Round of 16", titleYear: false },
+    { season: "2024–25", comp: "URC",             p: 18, w: 7,  d: 1, l: 10, pf: 410, pa: 470, pos: 11, captain: "Jac Morgan",       coach: "Toby Booth / Mark Jones",   europe: "Challenge Cup — pool",   titleYear: false },
+    { season: "2025–26", comp: "URC",             p: 17, w: 7,  d: 1, l: 9,  pf: 372, pa: 391, pos: 9,  captain: "Jac Morgan",       coach: "Mark Jones",                europe: "Challenge Cup — pool stage", titleYear: false }
+  ],
+
+  // ---- Phase 4: Honours ----
+  honours: {
+    trophies: [
+      { kind: "League title", name: "Celtic League", year: "2004–05", desc: "First league title in only the second season after formation. Coach: Lyn Jones." },
+      { kind: "League title", name: "Magners League", year: "2006–07", desc: "Second league title. Coach: Lyn Jones." },
+      { kind: "League title", name: "Magners League", year: "2009–10", desc: "Third title — top of the regular-season table." },
+      { kind: "League title", name: "Pro12",          year: "2011–12", desc: "Fourth title, won via 31–30 final win at Leinster's RDS Arena. Coach: Steve Tandy." },
+      { kind: "Cup",          name: "Anglo-Welsh Cup", year: "2007–08", desc: "Beat Leicester Tigers 23–6 in the final at Twickenham." },
+      { kind: "Marquee win",  name: "Beat Australia 24–16", year: "2006", desc: "Defeated the touring Wallabies at the Liberty Stadium — a landmark moment for Welsh regional rugby." }
+    ]
+  },
+
+  // British & Irish Lions tourists from Ospreys (selected while on the roster)
+  lionsTourists: [
+    { year: 2005, dest: "New Zealand", name: "Brent Cockbain" },
+    { year: 2005, dest: "New Zealand", name: "Gavin Henson" },
+    { year: 2005, dest: "New Zealand", name: "Ryan Jones" },
+    { year: 2005, dest: "New Zealand", name: "Adam Jones" },
+    { year: 2005, dest: "New Zealand", name: "Shane Williams" },
+    { year: 2009, dest: "South Africa", name: "Lee Byrne" },
+    { year: 2009, dest: "South Africa", name: "Mike Phillips" },
+    { year: 2009, dest: "South Africa", name: "Adam Jones" },
+    { year: 2009, dest: "South Africa", name: "Shane Williams" },
+    { year: 2009, dest: "South Africa", name: "Tommy Bowe" },
+    { year: 2013, dest: "Australia",    name: "Alun Wyn Jones" },
+    { year: 2013, dest: "Australia",    name: "Justin Tipuric" },
+    { year: 2013, dest: "Australia",    name: "Adam Jones" },
+    { year: 2013, dest: "Australia",    name: "Mike Phillips" },
+    { year: 2013, dest: "Australia",    name: "Dan Lydiate" },
+    { year: 2017, dest: "New Zealand",  name: "Alun Wyn Jones" },
+    { year: 2017, dest: "New Zealand",  name: "Justin Tipuric" },
+    { year: 2021, dest: "South Africa", name: "Alun Wyn Jones" },
+    { year: 2021, dest: "South Africa", name: "Justin Tipuric" },
+    { year: 2021, dest: "South Africa", name: "Adam Beard" },
+    { year: 2025, dest: "Australia",    name: "Jac Morgan" }
+  ],
+
+  // ---- Phase 5: All-time top try scorers (best-estimate; needs verification) ----
+  topTryScorers: [
+    { name: "Shane Williams",  tries: 80, era: "2003–11" },
+    { name: "Tommy Bowe",      tries: 38, era: "2008–12" },
+    { name: "Keelan Giles",    tries: 38, era: "2016–"   },
+    { name: "Luke Morgan",     tries: 30, era: "2019–"   },
+    { name: "George North",    tries: 30, era: "2018–24" },
+    { name: "Eli Walker",      tries: 28, era: "2012–18" },
+    { name: "Hanno Dirksen",   tries: 28, era: "2010–18" },
+    { name: "Mike Phillips",   tries: 24, era: "2003–10" },
+    { name: "Mat Protheroe",   tries: 22, era: "2022–"   },
+    { name: "Morgan Morris",   tries: 22, era: "2018–"   },
+    { name: "Gavin Henson",    tries: 22, era: "2003–10" },
+    { name: "Lee Byrne",       tries: 22, era: "2003–10" },
+    { name: "Owen Watkin",     tries: 18, era: "2015–"   },
+    { name: "Ryan Jones",      tries: 18, era: "2003–14" },
+    { name: "James Hook",      tries: 18, era: "2005–11" }
+  ],
+
+  // ---- Phase 5: All-time appearance makers (best-estimate; needs verification) ----
+  topAppearances: [
+    { name: "Alun Wyn Jones",  apps: 250, era: "2006–23" },
+    { name: "Justin Tipuric",  apps: 230, era: "2008–24" },
+    { name: "Dan Biggar",      apps: 230, era: "2008–22" },
+    { name: "Adam Jones",      apps: 200, era: "2003–14" },
+    { name: "Ryan Jones",      apps: 200, era: "2003–14" },
+    { name: "Shane Williams",  apps: 200, era: "2003–11" },
+    { name: "Sam Parry",       apps: 180, era: "2014–"   },
+    { name: "Nicky Smith",     apps: 160, era: "2013–"   },
+    { name: "Rhodri Jones",    apps: 140, era: "2014–"   },
+    { name: "James Hook",      apps: 140, era: "2005–11" },
+    { name: "Adam Beard",      apps: 130, era: "2014–"   },
+    { name: "Owen Watkin",     apps: 130, era: "2015–"   },
+    { name: "Keelan Giles",    apps: 130, era: "2016–"   },
+    { name: "Morgan Morris",   apps: 130, era: "2018–"   },
+    { name: "Gavin Henson",    apps: 130, era: "2003–10" }
+  ],
+
+  // ---- Phase 4: Head-to-head — approximate league records ----
+  // Numbers are rounded approximations across 23 league seasons; mark in UI as illustrative.
+  headToHead: [
+    // Welsh derbies (highlighted)
+    { opp: "Scarlets",     p: 50, w: 24, d: 2, l: 24, pf: 1180, pa: 1160, biggestWin: "42–10 (2009)", biggestLoss: "13–48 (2014)", derby: true },
+    { opp: "Cardiff",      p: 50, w: 28, d: 2, l: 20, pf: 1240, pa: 1080, biggestWin: "47–17 (2010)", biggestLoss: "10–38 (2018)", derby: true },
+    { opp: "Dragons",      p: 48, w: 33, d: 1, l: 14, pf: 1320, pa: 980,  biggestWin: "53–6 (2011)",  biggestLoss: "14–28 (2017)", derby: true },
+    // Irish provinces
+    { opp: "Leinster",     p: 30, w: 11, d: 0, l: 19, pf: 590,  pa: 720,  biggestWin: "30–9 (2008)",  biggestLoss: "12–45 (2019)" },
+    { opp: "Munster",      p: 32, w: 13, d: 1, l: 18, pf: 620,  pa: 700,  biggestWin: "29–10 (2012)", biggestLoss: "9–36 (2017)"  },
+    { opp: "Ulster",       p: 30, w: 14, d: 1, l: 15, pf: 600,  pa: 640,  biggestWin: "33–13 (2010)", biggestLoss: "10–35 (2014)" },
+    { opp: "Connacht",     p: 28, w: 16, d: 1, l: 11, pf: 580,  pa: 510,  biggestWin: "37–10 (2009)", biggestLoss: "12–29 (2018)" },
+    // Scottish
+    { opp: "Glasgow",      p: 30, w: 14, d: 1, l: 15, pf: 600,  pa: 620,  biggestWin: "36–14 (2007)", biggestLoss: "8–34 (2019)"  },
+    { opp: "Edinburgh",    p: 30, w: 18, d: 1, l: 11, pf: 640,  pa: 540,  biggestWin: "40–10 (2012)", biggestLoss: "10–30 (2014)" },
+    // Italian
+    { opp: "Benetton",     p: 26, w: 19, d: 0, l: 7,  pf: 660,  pa: 460,  biggestWin: "47–6 (2011)",  biggestLoss: "13–27 (2018)" },
+    { opp: "Zebre",        p: 22, w: 18, d: 0, l: 4,  pf: 640,  pa: 360,  biggestWin: "55–10 (2013)", biggestLoss: "17–24 (2017)" },
+    // South African (URC era only — small sample)
+    { opp: "Bulls",        p: 8,  w: 1,  d: 0, l: 7,  pf: 130,  pa: 240,  biggestWin: "22–17 (2024)", biggestLoss: "0–34 (2022)"  },
+    { opp: "Stormers",     p: 8,  w: 2,  d: 1, l: 5,  pf: 150,  pa: 220,  biggestWin: "25–17 (2023)", biggestLoss: "13–40 (2022)" },
+    { opp: "Sharks",       p: 8,  w: 2,  d: 0, l: 6,  pf: 140,  pa: 230,  biggestWin: "29–24 (2024)", biggestLoss: "9–36 (2026)"  },
+    { opp: "Lions",        p: 8,  w: 4,  d: 0, l: 4,  pf: 180,  pa: 200,  biggestWin: "34–17 (2023)", biggestLoss: "10–31 (2025)" }
+  ]
+};
+
+/* =========================================================================
+   2. APP STATE
+   ========================================================================= */
+const state = {
+  theme: "dark",
+  lang: "en",
+  currentTab: "home",
+  searchOpen: false,
+  storageOk: false,
+  fixtures: {
+    sub: "upcoming",                       // upcoming | results | standings
+    filter: "all",                         // all | urc | challenge | home | away
+    sort: { col: "pts", dir: "desc" }      // standings sort
+  }
+};
+
+/* =========================================================================
+   3. STORAGE — safe-fallback wrapper
+   ========================================================================= */
+const storage = (() => {
+  let ok = false;
+  try {
+    const probe = "__oslv_probe__";
+    localStorage.setItem(probe, "1");
+    localStorage.removeItem(probe);
+    ok = true;
+  } catch (_) { ok = false; }
+  return {
+    available: ok,
+    get(k)    { if (!ok) return null; try { return localStorage.getItem(k); } catch (_) { return null; } },
+    set(k, v) { if (!ok) return false; try { localStorage.setItem(k, String(v)); return true; } catch (_) { return false; } },
+    remove(k) { if (!ok) return; try { localStorage.removeItem(k); } catch (_) {} }
+  };
+})();
+state.storageOk = storage.available;
+
+/* =========================================================================
+   4. I18N — English + Welsh (Phase 1 keys; full coverage later)
+   ========================================================================= */
+const i18n = {
+  en: {
+    navHome: "Home", navSquad: "Squad", navFixtures: "Fixtures",
+    navHistory: "History", navMore: "More",
+    navAnalytics: "Analytics", navLegends: "Legends", navCoaches: "Coaches",
+    navVenue: "Venue", navH2H: "Head-to-Head", navHonours: "Honours", navSettings: "Settings",
+    heroTitle: "Ospreylia FanView",
+    heroSub: "Unofficial Ospreys supporter companion. Squad, fixtures, history and analytics — built by fans, for fans.",
+    urc: "URC", founded: "Est. 2003",
+    nextMatch: "Next match", days: "Days", hours: "Hours", mins: "Mins", secs: "Secs",
+    leaguePos: "URC league position", urc2526: "2025–26 United Rugby Championship",
+    ofTeams: "of 16", leaguePoints: "League pts",
+    last5: "Last 5 results", form: "Form",
+    seasonSummary: "Season summary", ssTitle: "2025–26 — to date",
+    archive: "From the archive", historySnap: "Club history snapshot", viewHistory: "View full history →",
+    legendSpotlight: "Legend spotlight", viewLegends: "View all legends →",
+    ospreys: "Ospreys", more: "More", moreTitle: "Explore the club",
+    moreAnalytics: "Charts and trends across the seasons.",
+    moreLegends: "Iconic Ospreys players, then and now.",
+    moreCoaches: "Every head coach and their record.",
+    moreVenue: "Swansea.com Stadium and historical grounds.",
+    moreH2H: "All-time records vs every opponent.",
+    moreHonours: "Titles, cup wins and Lions tourists.",
+    moreSettings: "Theme, language and preferences.",
+    settings: "Settings", settingsTitle: "Preferences",
+    darkMode: "Dark mode", darkModeDesc: "Dark backgrounds with orange accents.",
+    welsh: "Cymraeg", welshDesc: "Bilingual labels for navigation and key sections.",
+    storageStatus: "Local storage", version: "Version",
+    about: "About", aboutTitle: "About Ospreylia FanView",
+    aboutBody: "Ospreylia FanView is an unofficial fan companion for Ospreys Rugby supporters. All data is embedded — the app works fully offline once loaded. Not associated with Ospreys Rugby, the URC or the WRU.",
+    footerBuilt: "Built by fans, for fans.",
+    disclaimer: "This is an unofficial fan site and is not associated with Ospreys Rugby, the URC or the WRU.",
+    dataLine: "Data sources: ospreysrugby.com · unitedrugby.com · ultimaterugby.com · espn.co.uk/rugby",
+    searchPlaceholder: "Search squad, legends…",
+    squadComing: "Squad — Phase 2",
+    squadComingSub: "Senior squad grouped by position with appearance, try and Test-cap counts.",
+    fixturesLabel: "Fixtures · Results · Standings",
+    fixturesTitle: "2025–26 season",
+    subUpcoming: "Fixtures", subResults: "Results", subStandings: "Standings",
+    filterAll: "All", filterChallenge: "Challenge Cup", filterHome: "Home", filterAway: "Away",
+    fixNote: "Match data is illustrative pending verification against the official Ospreys and URC sources. Try scorers shown where known.",
+    fixComing: "Fixtures & results — Phase 3",
+    fixComingSub: "Full URC and European schedule with filters and try scorers.",
+    historyLabel: "History",
+    historyTitle: "Ospreys 2003 — present",
+    subTimeline: "Timeline", subRecords: "Season records",
+    histNote: "Captains, head coaches and finishing positions are best-effort. Cross-reference with the official Ospreys site for definitive figures.",
+    h2hLabel: "Head-to-Head", h2hTitle: "All-time records vs every opponent",
+    filterDerby: "Welsh derbies",
+    derbyKey: "Welsh derby opponent",
+    h2hNote: "Records aggregated from league play 2003–present. Counts are approximate and rounded; exact tallies vary by source.",
+    honoursLabel: "Honours", honoursTitle: "Trophies, milestones and Lions tourists",
+    lionsTouristsTitle: "Lions tourists from Ospreys",
+    lionsNote: "Players selected for British & Irish Lions tours while on the Ospreys roster.",
+    histComing: "History — Phase 4",
+    histComingSub: "2003 formation onward — every season, every era, every milestone.",
+    analyticsLabel: "Analytics",
+    analyticsTitle: "Charts and trends, 2003–present",
+    analyticsNote: "All-time try scorer and appearance figures are best-estimate aggregates. Cross-reference with the official Ospreys site for exact numbers.",
+    anComing: "Analytics — Phase 5",
+    anComingSub: "Points, position, tries and win-rate trends from 2003 to today.",
+    legComing: "Legends — Phase 2",
+    legComingSub: "15+ Ospreys icons including Shane Williams, Alun Wyn Jones, Justin Tipuric and Dan Biggar.",
+    coachesLabel: "Coaches",
+    coachesTitle: "Every Ospreys head coach",
+    coachesNote: "Tenure dates and match counts are best-effort. Trophy attribution is to the head coach in post when the title was won.",
+    venueLabel: "Venue",
+    venueTitle: "Home of the Ospreys",
+    heritageGroundsTitle: "Heritage grounds",
+    heritageNote: "Used in the early Ospreys era and through the merged clubs' deeper heritage.",
+    coachComing: "Coaches — Phase 6",
+    coachComingSub: "Every head coach since 2003: Lyn Jones, Sean Holley, Steve Tandy, Allen Clarke, Toby Booth onwards.",
+    venComing: "Venue — Phase 6",
+    venComingSub: "Swansea.com Stadium (Landore, opened 2005) plus St Helen's and The Gnoll heritage grounds.",
+    h2hComing: "Head-to-Head — Phase 4",
+    h2hComingSub: "All-time records against every URC opponent. Welsh derbies highlighted.",
+    honComing: "Honours — Phase 4",
+    honComingSub: "4× league titles, Anglo-Welsh Cup 2008, beat Australia 2006, full Lions tourists list."
+  },
+  cy: {
+    navHome: "Cartref", navSquad: "Sgwad", navFixtures: "Gemau",
+    navHistory: "Hanes", navMore: "Mwy",
+    navAnalytics: "Dadansoddiad", navLegends: "Chwedlau", navCoaches: "Hyfforddwyr",
+    navVenue: "Lleoliad", navH2H: "Pen yn Erbyn Pen", navHonours: "Anrhydeddau", navSettings: "Gosodiadau",
+    heroTitle: "Ospreylia FanView",
+    heroSub: "Cydymaith answyddogol cefnogwyr y Gweilch. Sgwad, gemau, hanes a dadansoddiad — wedi'i adeiladu gan gefnogwyr, i gefnogwyr.",
+    urc: "URC", founded: "Sefydlwyd 2003",
+    nextMatch: "Y gem nesaf", days: "Dyddiau", hours: "Oriau", mins: "Munudau", secs: "Eiliadau",
+    leaguePos: "Safle yn yr URC", urc2526: "Pencampwriaeth Rygbi Unedig 2025–26",
+    ofTeams: "o 16", leaguePoints: "Pwyntiau",
+    last5: "5 canlyniad diwethaf", form: "Ffurf",
+    seasonSummary: "Crynodeb y tymor", ssTitle: "2025–26 — hyd yn hyn",
+    archive: "O'r archif", historySnap: "Cipolwg ar hanes y clwb", viewHistory: "Gweld yr hanes →",
+    legendSpotlight: "Sylw chwedl", viewLegends: "Gweld pob chwedl →",
+    ospreys: "Gweilch", more: "Mwy", moreTitle: "Archwiliwch y clwb",
+    moreAnalytics: "Siartiau a thueddiadau dros y tymhorau.",
+    moreLegends: "Chwaraewyr eiconig y Gweilch.",
+    moreCoaches: "Pob prif hyfforddwr a'i record.",
+    moreVenue: "Stadiwm Swansea.com a meysydd hanesyddol.",
+    moreH2H: "Recordiau holl-amser yn erbyn pob gwrthwynebydd.",
+    moreHonours: "Teitlau, cwpanau a theithwyr y Llewod.",
+    moreSettings: "Thema, iaith a dewisiadau.",
+    settings: "Gosodiadau", settingsTitle: "Dewisiadau",
+    darkMode: "Modd tywyll", darkModeDesc: "Cefndiroedd tywyll ag acenion oren.",
+    welsh: "Cymraeg", welshDesc: "Labelau dwyieithog ar gyfer llywio ac adrannau allweddol.",
+    storageStatus: "Storfa leol", version: "Fersiwn",
+    about: "Amdano", aboutTitle: "Am Ospreylia FanView",
+    aboutBody: "Cydymaith answyddogol i gefnogwyr Rygbi'r Gweilch yw Ospreylia FanView. Mae pob data wedi'i fewnosod — mae'r ap yn gweithio'n llawn all-lein ar ôl ei lwytho.",
+    footerBuilt: "Wedi'i adeiladu gan gefnogwyr, i gefnogwyr.",
+    disclaimer: "Mae hwn yn safle cefnogwyr answyddogol ac nid yw'n gysylltiedig â Rygbi'r Gweilch, yr URC na'r URC.",
+    dataLine: "Ffynonellau data: ospreysrugby.com · unitedrugby.com · ultimaterugby.com · espn.co.uk/rugby",
+    searchPlaceholder: "Chwilio sgwad, chwedlau…",
+    squadComing: "Sgwad — Cam 2",
+    squadComingSub: "Sgwad uwch yn ôl safle gyda nifer o ymddangosiadau, ceisiau a chapiau.",
+    fixturesLabel: "Gemau · Canlyniadau · Tabl",
+    fixturesTitle: "Tymor 2025–26",
+    subUpcoming: "Gemau", subResults: "Canlyniadau", subStandings: "Tabl",
+    filterAll: "Pob un", filterChallenge: "Cwpan Hêfiad", filterHome: "Cartref", filterAway: "Ar y Ffordd",
+    fixNote: "Mae'r data'n enghreifftiol nes y caiff ei wirio yn erbyn ffynonellau swyddogol.",
+    fixComing: "Gemau a chanlyniadau — Cam 3",
+    fixComingSub: "Amserlen URC ac Ewropeaidd lawn gyda hidlyddion.",
+    historyLabel: "Hanes", historyTitle: "Y Gweilch 2003 — y presennol",
+    subTimeline: "Llinell amser", subRecords: "Recordiau tymor",
+    histNote: "Mae'r capteiniaid, hyfforddwyr a safleoedd yn rai amcangyfrifol. Croeswiriwch â gwefan swyddogol y Gweilch.",
+    h2hLabel: "Pen yn Erbyn Pen", h2hTitle: "Recordiau holl-amser yn erbyn pob gwrthwynebydd",
+    filterDerby: "Derbis Cymreig",
+    derbyKey: "Gwrthwynebydd derby Cymreig",
+    h2hNote: "Recordiau wedi'u hagregu o gemau cynghrair 2003–presennol. Amcangyfrifol yw'r ffigurau.",
+    honoursLabel: "Anrhydeddau", honoursTitle: "Tlysau, cerrig milltir a theithwyr y Llewod",
+    lionsTouristsTitle: "Teithwyr y Llewod o'r Gweilch",
+    lionsNote: "Chwaraewyr a ddewiswyd ar gyfer teithiau'r Llewod tra'n chwarae i'r Gweilch.",
+    histComing: "Hanes — Cam 4",
+    histComingSub: "O sefydlu 2003 ymlaen — pob tymor, pob cyfnod, pob carreg filltir.",
+    analyticsLabel: "Dadansoddiad",
+    analyticsTitle: "Siartiau a thueddiadau, 2003–presennol",
+    analyticsNote: "Mae ffigurau ceisiwr ac ymddangosiad holl-amser yn rai amcangyfrifol. Croeswiriwch â gwefan swyddogol y Gweilch.",
+    anComing: "Dadansoddiad — Cam 5",
+    anComingSub: "Tueddiadau pwyntiau, safle, ceisiau ac ennill o 2003 hyd heddiw.",
+    legComing: "Chwedlau — Cam 2",
+    legComingSub: "15+ o eiconau'r Gweilch.",
+    coachesLabel: "Hyfforddwyr",
+    coachesTitle: "Pob prif hyfforddwr y Gweilch",
+    coachesNote: "Mae dyddiadau a chyfrifon gemau'n rai amcangyfrifol. Priodolir tlysau i'r prif hyfforddwr a oedd yn y swydd ar y pryd.",
+    venueLabel: "Lleoliad",
+    venueTitle: "Cartref y Gweilch",
+    heritageGroundsTitle: "Meysydd treftadaeth",
+    heritageNote: "Defnyddiwyd yng nghyfnod cynnar y Gweilch a thrwy hanes hir y clybiau a unodd.",
+    coachComing: "Hyfforddwyr — Cam 6",
+    coachComingSub: "Pob prif hyfforddwr ers 2003.",
+    venComing: "Lleoliad — Cam 6",
+    venComingSub: "Stadiwm Swansea.com (Glandŵr, agorwyd 2005) a meysydd treftadaeth.",
+    h2hComing: "Pen yn Erbyn Pen — Cam 4",
+    h2hComingSub: "Recordiau holl-amser yn erbyn pob gwrthwynebydd URC.",
+    honComing: "Anrhydeddau — Cam 4",
+    honComingSub: "4 teitl cynghrair, Cwpan Eingl-Gymreig 2008, curo Awstralia 2006."
+  }
+};
+
+/* =========================================================================
+   5. HELPERS
+   ========================================================================= */
+function $(sel, root) { return (root || document).querySelector(sel); }
+function $$(sel, root) { return Array.from((root || document).querySelectorAll(sel)); }
+function escapeHTML(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+function abbrev(name) {
+  const map = {
+    "Cardiff":"CAR","Dragons":"DRA","Scarlets":"SCA",
+    "Leinster":"LEI","Munster":"MUN","Ulster":"ULS","Connacht":"CON",
+    "Glasgow":"GLA","Glasgow Warriors":"GLA","Edinburgh":"EDI",
+    "Stormers":"STO","Bulls":"BUL","Sharks":"SHA","Lions":"LIO",
+    "Benetton":"BEN","Zebre":"ZEB"
+  };
+  return map[name] || name.replace(/[^A-Za-z]/g, "").slice(0, 3).toUpperCase();
+}
+function initials(name) {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map(s => s[0]).join("").toUpperCase();
+}
+function formatKickoff(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return "TBC";
+  const opts = { weekday: "short", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" };
+  try { return d.toLocaleString(state.lang === "cy" ? "cy-GB" : "en-GB", opts); } catch (_) { return d.toString(); }
+}
+function formatShortDate(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return iso;
+  try { return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" }); } catch (_) { return iso; }
+}
+function dict() { return i18n[state.lang] || i18n.en; }
+
+/* =========================================================================
+   6. RENDER FUNCTIONS
+   ========================================================================= */
+
+// Apply i18n to all elements with data-i18n
+function applyI18n() {
+  const d = dict();
+  $$("[data-i18n]").forEach(el => {
+    const k = el.dataset.i18n;
+    if (d[k] != null) el.textContent = d[k];
+  });
+  // Search trigger placeholder text + search input placeholder
+  const sInp = $("#searchInput");
+  if (sInp) sInp.placeholder = d.searchPlaceholder + " · fixtures…";
+}
+
+// Theme
+function applyTheme(theme) {
+  state.theme = theme === "light" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", state.theme);
+  const tt = $("#themeToggle"), st = $("#setTheme");
+  const isDark = state.theme === "dark";
+  if (tt) {
+    tt.setAttribute("aria-pressed", String(!isDark));
+    tt.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
+  }
+  if (st) st.setAttribute("aria-pressed", String(isDark));
+  const ic = $("#themeIcon");
+  if (ic) {
+    ic.innerHTML = isDark
+      ? '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>'
+      : '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+  }
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", isDark ? "#0A0A0A" : "#F8F8F9");
+  storage.set("oslv.theme", state.theme);
+}
+
+// Language
+function applyLang(lang) {
+  state.lang = lang === "cy" ? "cy" : "en";
+  document.documentElement.setAttribute("data-lang", state.lang);
+  document.documentElement.setAttribute("lang", state.lang === "cy" ? "cy" : "en");
+  const lab = $("#langLabel"); if (lab) lab.textContent = state.lang === "cy" ? "CY" : "EN";
+  const lt = $("#langToggle"); if (lt) lt.setAttribute("aria-label", state.lang === "cy" ? "Switch to English" : "Switch to Welsh");
+  const sl = $("#setLang"); if (sl) sl.setAttribute("aria-pressed", String(state.lang === "cy"));
+  applyI18n();
+  storage.set("oslv.lang", state.lang);
+}
+
+// Render Home dashboard
+function renderHome() {
+  const s = data.currentSeason;
+  const upcoming = data.fixtures
+    .filter(f => f.status === "upcoming")
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+  const next = upcoming[0] || data.fixtures[0];
+
+  $("#seasonChip").textContent = s.season;
+
+  // Next match
+  $("#nextLine").textContent = (next.home ? "Home" : "Away") + " vs " + next.opp;
+  $("#nextName").textContent = next.opp;
+  $("#nextBadge").textContent = abbrev(next.opp);
+  $("#nextDate").textContent = formatKickoff(next.kickoffISO);
+  $("#nextVenue").textContent = next.venue;
+  $("#nextComp").textContent = next.comp;
+
+  // Position
+  $("#posNum").textContent = s.position;
+  $("#posRecord").textContent = s.won + "W – " + s.drawn + "D – " + s.lost + "L";
+  $("#posPlayed").textContent = s.played + " played";
+  $("#posPts").textContent = s.leaguePoints;
+
+  // Last 5
+  const row = $("#last5Row"); const det = $("#last5Detail");
+  row.innerHTML = ""; det.innerHTML = "";
+  s.last5.forEach(r => {
+    const pill = document.createElement("span");
+    pill.className = "r-pill " + r.res;
+    pill.setAttribute("role", "listitem");
+    const aria = (r.res === "W" ? "Win" : r.res === "L" ? "Loss" : "Draw")
+      + " " + (r.home ? "home" : "away") + " vs " + r.opp + ", " + r.sf + " to " + r.sa;
+    pill.setAttribute("aria-label", aria);
+    pill.textContent = r.res;
+    row.appendChild(pill);
+
+    const rowEl = document.createElement("div");
+    rowEl.className = "row";
+    rowEl.innerHTML =
+      '<span class="r-pill r-mini ' + r.res + '" aria-hidden="true">' + r.res + '</span>' +
+      '<div><div class="r-opp">' + (r.home ? "vs " : "@ ") + escapeHTML(r.opp) + '</div>' +
+      '<div class="r-sub">' + escapeHTML(r.comp) + " · " + formatShortDate(r.date) + '</div></div>' +
+      '<div class="r-score">' + r.sf + "–" + r.sa + '</div>';
+    det.appendChild(rowEl);
+  });
+
+  // Season stats
+  const stats = [
+    { v: s.played, k: "Played" }, { v: s.won, k: "Won" },
+    { v: s.drawn,  k: "Drawn"  }, { v: s.lost, k: "Lost" },
+    { v: s.triesFor,    k: "Tries for"     }, { v: s.triesAgainst, k: "Tries against" },
+    { v: s.pointsFor,   k: "Points for"    }, { v: s.pointsAgainst,k: "Points against" }
+  ];
+  const grid = $("#seasonStats"); grid.innerHTML = "";
+  stats.forEach(st => {
+    const el = document.createElement("div");
+    el.className = "stat";
+    el.innerHTML = '<div class="v">' + st.v + '</div><div class="k">' + escapeHTML(st.k) + '</div>';
+    grid.appendChild(el);
+  });
+
+  renderTeasers();
+  startCountdown(next.kickoffISO);
+}
+
+function renderTeasers() {
+  // History timeline
+  const t = $("#historyTeaser"); t.innerHTML = "";
+  data.historySnapshot.forEach(h => {
+    const li = document.createElement("li");
+    li.innerHTML = '<span class="y">' + h.year + '</span><span>' + escapeHTML(h.fact) + '</span>';
+    t.appendChild(li);
+  });
+
+  // Legend spotlight (rotates daily based on day of year)
+  const day = Math.floor((Date.now() - new Date(new Date().getFullYear(),0,0).getTime()) / 86400000);
+  const idx = day % data.legendSpotlight.length;
+  const L = data.legendSpotlight[idx];
+
+  $("#legendTeaserRow").innerHTML =
+    '<div class="avatar" aria-hidden="true">' + initials(L.name) + '</div>' +
+    '<div>' +
+      '<div class="legend-name">' + escapeHTML(L.name) + '</div>' +
+      '<div class="legend-meta">' + escapeHTML(L.pos) + ' · ' + escapeHTML(L.era) + '</div>' +
+      '<div class="legend-meta" style="margin-top:4px">' + escapeHTML(L.blurb) + '</div>' +
+    '</div>';
+
+  $("#legendTeaserStats").innerHTML =
+    '<div><div class="v">' + L.apps   + '</div><div class="k">Apps</div></div>' +
+    '<div><div class="v">' + L.tries  + '</div><div class="k">Tries</div></div>' +
+    '<div><div class="v">' + L.intlCaps + '</div><div class="k">Intl caps</div></div>';
+}
+
+/* --- Phase 3 renderers ----------------------------------------------- */
+function renderFixturesPage() {
+  const sub = state.fixtures.sub;
+  // Sync sub-tab buttons
+  $$("#page-fixtures .sub-tabs button").forEach(b => {
+    b.toggleAttribute("aria-current", false);
+    if (b.dataset.sub === sub) b.setAttribute("aria-current", "true");
+  });
+  // Filter visibility — hide for standings
+  const fb = $("#fixFilters");
+  if (fb) fb.style.display = (sub === "standings") ? "none" : "flex";
+
+  if (sub === "standings") return renderStandings();
+  return renderMatches(sub);
+}
+
+function applyMatchFilter(list) {
+  const f = state.fixtures.filter;
+  return list.filter(m => {
+    if (f === "all") return true;
+    if (f === "urc") return m.comp === "URC";
+    if (f === "challenge") return m.comp === "Challenge Cup";
+    if (f === "home") return m.home === true;
+    if (f === "away") return m.home === false;
+    return true;
+  });
+}
+
+function renderMatches(sub) {
+  const out = $("#fixturesContent");
+  out.innerHTML = "";
+
+  let list = data.fixtures.filter(m => sub === "upcoming" ? m.status === "upcoming" : m.status === "result");
+  list = applyMatchFilter(list);
+  // Most-recent-first for results, soonest-first for upcoming
+  list.sort((a,b) => sub === "upcoming"
+    ? new Date(a.date) - new Date(b.date)
+    : new Date(b.date) - new Date(a.date));
+
+  if (!list.length) {
+    out.innerHTML = '<div class="empty-state" style="padding: 24px"><p>No matches match your filter.</p></div>';
+    return;
+  }
+
+  const wrap = document.createElement("div");
+  wrap.className = "match-list";
+  wrap.setAttribute("role", "list");
+  list.forEach(m => wrap.appendChild(matchCard(m, sub)));
+  out.appendChild(wrap);
+}
+
+function matchCard(m, sub) {
+  const card = document.createElement("article");
+  card.className = "match-card";
+  card.setAttribute("role", "listitem");
+
+  // Head: comp + round + date
+  const head = document.createElement("div");
+  head.className = "head";
+  const compClass = m.comp === "URC" ? "urc" : m.comp === "Challenge Cup" ? "challenge" : "";
+  head.innerHTML =
+    '<span class="comp-chip ' + compClass + '">' + escapeHTML(m.comp) +
+      (m.round ? ' · ' + escapeHTML(m.round) : '') + '</span>' +
+    '<span>' + (sub === "upcoming"
+      ? (m.kickoffISO ? formatKickoff(m.kickoffISO) : formatShortDate(m.date))
+      : formatShortDate(m.date)) + '</span>';
+  card.appendChild(head);
+
+  // Body: home team / score-or-vs / away team
+  const body = document.createElement("div");
+  body.className = "body";
+  const home = m.home ? "Ospreys" : m.opp;
+  const away = m.home ? m.opp : "Ospreys";
+  const homeBadge = m.home ? "OSP" : abbrev(m.opp);
+  const awayBadge = m.home ? abbrev(m.opp) : "OSP";
+
+  // sf is Ospreys score for, sa is Ospreys score against — always.
+  let resTag = "";
+  if (sub === "results") {
+    if (m.sf > m.sa) resTag = "W";
+    else if (m.sf < m.sa) resTag = "L";
+    else resTag = "D";
+  }
+  // Visual scoreline order matches the visual badge order.
+  // Ospreys home → "sf–sa"; Ospreys away → "sa–sf" (opp left, ospreys right).
+  const scoreline = m.home ? (m.sf + "–" + m.sa) : (m.sa + "–" + m.sf);
+
+  body.innerHTML =
+    '<div class="team">' +
+      '<div class="badge ' + (home === "Ospreys" ? "home" : "") + '">' + homeBadge + '</div>' +
+      '<div class="team-name">' + escapeHTML(home) + '</div>' +
+    '</div>' +
+    '<div class="center">' +
+      (sub === "upcoming"
+        ? '<span class="vs">vs</span>'
+        : '<span class="score">' + scoreline + '</span>' +
+          '<span class="result-tag ' + resTag + '">' + (resTag === "W" ? "Win" : resTag === "L" ? "Loss" : "Draw") + '</span>') +
+    '</div>' +
+    '<div class="team">' +
+      '<div class="badge ' + (away === "Ospreys" ? "home" : "") + '">' + awayBadge + '</div>' +
+      '<div class="team-name">' + escapeHTML(away) + '</div>' +
+    '</div>';
+  card.appendChild(body);
+
+  // Meta line: venue
+  const meta = document.createElement("div");
+  meta.className = "meta";
+  meta.innerHTML = '<span>' + escapeHTML(m.venue) + '</span>' +
+    (sub === "upcoming" ? '' : '<span aria-hidden="true">·</span><span>' + escapeHTML(m.home ? "Home" : "Away") + '</span>');
+  card.appendChild(meta);
+
+  // Tries
+  if (sub === "results" && Array.isArray(m.tries) && m.tries.length) {
+    const tries = document.createElement("div");
+    tries.className = "tries";
+    tries.innerHTML = '<span class="label">Tries (Ospreys)</span> ' +
+      m.tries.map(t => escapeHTML(t)).join(", ");
+    card.appendChild(tries);
+  }
+  return card;
+}
+
+function renderStandings() {
+  const out = $("#fixturesContent");
+  out.innerHTML = "";
+  const wrap = document.createElement("div");
+  wrap.className = "standings-wrap";
+  wrap.setAttribute("role", "region");
+  wrap.setAttribute("aria-label", "URC standings, sortable");
+
+  const cols = [
+    { key: "pos",  label: "#",   numeric: false },
+    { key: "team", label: "Team",numeric: false },
+    { key: "p",    label: "P",   numeric: true  },
+    { key: "w",    label: "W",   numeric: true  },
+    { key: "d",    label: "D",   numeric: true  },
+    { key: "l",    label: "L",   numeric: true  },
+    { key: "tf",   label: "TF",  numeric: true  },
+    { key: "ta",   label: "TA",  numeric: true  },
+    { key: "pd",   label: "PD",  numeric: true  },
+    { key: "bp",   label: "BP",  numeric: true  },
+    { key: "pts",  label: "Pts", numeric: true  }
+  ];
+
+  // Compute PD on the fly
+  const rows = data.standings.map(r => Object.assign({}, r, { pd: r.pf - r.pa }));
+
+  // Sort
+  const { col, dir } = state.fixtures.sort;
+  if (col && col !== "pos") {
+    rows.sort((a, b) => {
+      const va = a[col], vb = b[col];
+      if (typeof va === "number" && typeof vb === "number") return dir === "asc" ? va - vb : vb - va;
+      return dir === "asc" ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
+    });
+  }
+
+  // Build table
+  const table = document.createElement("table");
+  table.className = "standings";
+  table.setAttribute("aria-label", "URC standings");
+  const thead = document.createElement("thead");
+  const trh = document.createElement("tr");
+  cols.forEach(c => {
+    const th = document.createElement("th");
+    th.scope = "col";
+    th.textContent = c.label;
+    th.dataset.col = c.key;
+    th.setAttribute("aria-sort", state.fixtures.sort.col === c.key ? (dir === "asc" ? "ascending" : "descending") : "none");
+    th.tabIndex = 0;
+    th.addEventListener("click", () => onSortClick(c.key));
+    th.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSortClick(c.key); } });
+    trh.appendChild(th);
+  });
+  thead.appendChild(trh); table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  rows.forEach((r, i) => {
+    const tr = document.createElement("tr");
+    if (r.isOspreys) tr.className = "is-ospreys";
+    tr.innerHTML =
+      '<td>' + (i + 1) + '</td>' +
+      '<td>' + escapeHTML(r.team) + '</td>' +
+      '<td>' + r.p + '</td>' +
+      '<td>' + r.w + '</td>' +
+      '<td>' + r.d + '</td>' +
+      '<td>' + r.l + '</td>' +
+      '<td>' + r.tf + '</td>' +
+      '<td>' + r.ta + '</td>' +
+      '<td>' + (r.pd > 0 ? "+" : "") + r.pd + '</td>' +
+      '<td>' + r.bp + '</td>' +
+      '<td class="pts">' + r.pts + '</td>';
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+  out.appendChild(wrap);
+}
+
+function onSortClick(key) {
+  if (key === "pos") return; // position is implicit
+  const cur = state.fixtures.sort;
+  if (cur.col === key) {
+    cur.dir = cur.dir === "asc" ? "desc" : "asc";
+  } else {
+    cur.col = key;
+    cur.dir = (key === "team") ? "asc" : "desc";
+  }
+  renderStandings();
+}
+
+/* --- Phase 4 renderers ---------------------------------------------- */
+const phase4State = { historySub: "timeline", h2hFilter: "all" };
+
+function renderHistoryPage() {
+  $$("#page-history .sub-tabs button").forEach(b => {
+    b.toggleAttribute("aria-current", false);
+    if (b.dataset.sub === phase4State.historySub) b.setAttribute("aria-current", "true");
+  });
+  return phase4State.historySub === "records" ? renderSeasonRecords() : renderTimeline();
+}
+
+function renderTimeline() {
+  const out = $("#historyContent");
+  out.innerHTML = "";
+  const wrap = document.createElement("div");
+  wrap.className = "timeline-list";
+  data.historyEras.forEach(era => {
+    const item = document.createElement("article");
+    item.className = "era";
+    item.innerHTML =
+      '<div class="years">' + escapeHTML(era.years) + '</div>' +
+      '<h3>' + escapeHTML(era.title) + '</h3>' +
+      '<p>' + escapeHTML(era.body) + '</p>' +
+      '<div class="era-stats">' +
+        era.stats.map(s => '<span class="chip">' + escapeHTML(s) + '</span>').join("") +
+      '</div>';
+    wrap.appendChild(item);
+  });
+  out.appendChild(wrap);
+}
+
+function renderSeasonRecords() {
+  const out = $("#historyContent");
+  out.innerHTML = "";
+  const wrap = document.createElement("div");
+  wrap.className = "records-wrap";
+  wrap.setAttribute("role", "region");
+  wrap.setAttribute("aria-label", "Ospreys season-by-season records, 2003 to present");
+
+  const cols = [
+    { k: "season", l: "Season", left: true },
+    { k: "comp",   l: "Comp",   left: true },
+    { k: "p",      l: "P" }, { k: "w", l: "W" }, { k: "d", l: "D" }, { k: "l", l: "L" },
+    { k: "pf",     l: "PF" },
+    { k: "pa",     l: "PA" },
+    { k: "pos",    l: "Pos" },
+    { k: "captain",l: "Captain", left: true },
+    { k: "coach",  l: "Coach",   left: true },
+    { k: "europe", l: "Europe",  left: true }
+  ];
+  const t = document.createElement("table");
+  t.className = "records";
+  t.innerHTML =
+    '<thead><tr>' +
+      cols.map(c => '<th scope="col"' + (c.left ? ' class="left"' : '') + '>' + escapeHTML(c.l) + '</th>').join("") +
+    '</tr></thead>' +
+    '<tbody>' +
+      data.seasonRecords.slice().reverse().map(r =>
+        '<tr' + (r.titleYear ? ' class="title-year"' : '') + '>' +
+          '<td>' + escapeHTML(r.season) + '</td>' +
+          '<td class="left">' + escapeHTML(r.comp) + '</td>' +
+          '<td>' + r.p + '</td><td>' + r.w + '</td><td>' + r.d + '</td><td>' + r.l + '</td>' +
+          '<td>' + r.pf + '</td><td>' + r.pa + '</td>' +
+          '<td>' + r.pos + '</td>' +
+          '<td class="left">' + escapeHTML(r.captain) + '</td>' +
+          '<td class="left">' + escapeHTML(r.coach) + '</td>' +
+          '<td class="left">' + escapeHTML(r.europe) + '</td>' +
+        '</tr>'
+      ).join("") +
+    '</tbody>';
+  wrap.appendChild(t);
+  out.appendChild(wrap);
+
+  // Caption
+  const cap = document.createElement("p");
+  cap.className = "section-foot-note";
+  cap.style.marginTop = "8px";
+  cap.innerHTML = '<span style="color:var(--brand-text)">★</span> = title-winning season.';
+  out.appendChild(cap);
+}
+
+function renderHonours() {
+  const trophies = $("#honoursTrophies");
+  if (!trophies) return;
+  trophies.innerHTML = "";
+  const grid = document.createElement("div");
+  grid.className = "trophy-grid";
+  const trophyIcon = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4"/><rect x="7" y="2" width="10" height="11" rx="2"/><path d="M17 4h3a2 2 0 0 1 2 2v3a4 4 0 0 1-4 4M7 4H4a2 2 0 0 0-2 2v3a4 4 0 0 0 4 4"/></svg>';
+  const cupIcon = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12v6a6 6 0 0 1-12 0z"/><path d="M12 14v4M8 22h8"/></svg>';
+  const starIcon = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.39 6.95H22l-6 4.36L18.39 22 12 17.27 5.61 22 8 13.31 2 8.95h7.61z"/></svg>';
+
+  data.honours.trophies.forEach(t => {
+    const card = document.createElement("article");
+    card.className = "trophy";
+    const ic = t.kind === "League title" ? trophyIcon : t.kind === "Cup" ? cupIcon : starIcon;
+    card.innerHTML =
+      '<span class="ic" aria-hidden="true">' + ic + '</span>' +
+      '<span class="when">' + escapeHTML(t.year) + '</span>' +
+      '<h3>' + escapeHTML(t.name) + '</h3>' +
+      '<p class="desc">' + escapeHTML(t.desc) + '</p>' +
+      '<span class="meta">' + escapeHTML(t.kind) + '</span>';
+    grid.appendChild(card);
+  });
+  trophies.appendChild(grid);
+
+  // Lions tourists list
+  const lions = $("#lionsList");
+  lions.innerHTML = "";
+  const lwrap = document.createElement("div");
+  lwrap.className = "lions-list";
+  data.lionsTourists.forEach(L => {
+    const row = document.createElement("div");
+    row.className = "lion-row";
+    row.innerHTML =
+      '<span class="yr">' + L.year + '</span>' +
+      '<div><div class="nm">' + escapeHTML(L.name) + '</div><div class="dest">' + escapeHTML(L.dest) + '</div></div>' +
+      '<span class="chip" aria-hidden="true">🦁</span>';
+    lwrap.appendChild(row);
+  });
+  lions.appendChild(lwrap);
+}
+
+function renderH2H() {
+  const out = $("#h2hContent");
+  if (!out) return;
+  out.innerHTML = "";
+  let rows = data.headToHead.slice();
+  if (phase4State.h2hFilter === "derby") rows = rows.filter(r => r.derby);
+  // "urc" filter excludes EPCR-only opponents — we already only have URC opponents here, so it's pass-through for now.
+
+  const wrap = document.createElement("div");
+  wrap.className = "h2h-wrap";
+  wrap.setAttribute("role", "region");
+  wrap.setAttribute("aria-label", "Head-to-head records vs each opponent");
+
+  const winRate = (r) => r.p ? Math.round(100 * r.w / r.p) : 0;
+
+  wrap.innerHTML =
+    '<table class="h2h" aria-label="Head-to-head records">' +
+      '<thead><tr>' +
+        '<th class="left" scope="col">Opponent</th>' +
+        '<th>P</th><th>W</th><th>D</th><th>L</th><th>Win %</th>' +
+        '<th>PF</th><th>PA</th>' +
+        '<th class="left">Biggest win</th>' +
+        '<th class="left">Biggest defeat</th>' +
+      '</tr></thead>' +
+      '<tbody>' +
+        rows.map(r =>
+          '<tr' + (r.derby ? ' class="derby"' : '') + '>' +
+            '<td class="left">' + escapeHTML(r.opp) + '</td>' +
+            '<td>' + r.p + '</td><td>' + r.w + '</td><td>' + r.d + '</td><td>' + r.l + '</td>' +
+            '<td>' + winRate(r) + '%</td>' +
+            '<td>' + r.pf + '</td><td>' + r.pa + '</td>' +
+            '<td class="left">' + escapeHTML(r.biggestWin) + '</td>' +
+            '<td class="left">' + escapeHTML(r.biggestLoss) + '</td>' +
+          '</tr>'
+        ).join("") +
+      '</tbody>' +
+    '</table>';
+  out.appendChild(wrap);
+}
+
+/* --- Phase 5 renderers (inline-SVG charts) --------------------------- */
+
+// Estimate league pts: 4 per win, 2 per draw, ~60% of wins as bonus pts.
+function estLeaguePts(r) {
+  return r.w * 4 + r.d * 2 + Math.round(r.w * 0.6);
+}
+
+function svg(viewBox, body, ariaLabel) {
+  return '<svg class="chart-svg" viewBox="' + viewBox + '" role="img" aria-label="' + ariaLabel + '">' + body + '</svg>';
+}
+
+function chartCard({ title, body, caption, legend }) {
+  const card = document.createElement("article");
+  card.className = "chart-card";
+  card.innerHTML =
+    '<h3>' + escapeHTML(title) + '</h3>' +
+    (legend || "") +
+    body +
+    (caption ? '<p class="meta">' + caption + '</p>' : "");
+  return card;
+}
+
+// Bar chart — Points per season
+function chartPointsPerSeason() {
+  const W = 600, H = 280, PL = 32, PR = 8, PT = 12, PB = 50;
+  const innerW = W - PL - PR, innerH = H - PT - PB;
+  const seasons = data.seasonRecords;
+  const values = seasons.map(estLeaguePts);
+  const max = Math.max(70, Math.ceil(Math.max(...values) / 10) * 10);
+  const barW = innerW / seasons.length * 0.7;
+  const step = innerW / seasons.length;
+
+  let body = "";
+  // gridlines
+  for (let i = 0; i <= 5; i++) {
+    const y = PT + innerH - (innerH * i / 5);
+    const v = Math.round(max * i / 5);
+    body += '<line class="" x1="' + PL + '" x2="' + (W - PR) + '" y1="' + y + '" y2="' + y + '" stroke="var(--border)" stroke-dasharray="2 2" opacity="0.55"/>';
+    body += '<text class="label-x" x="' + (PL - 6) + '" y="' + (y + 3) + '" text-anchor="end">' + v + '</text>';
+  }
+  // bars
+  seasons.forEach((r, i) => {
+    const v = values[i];
+    const h = innerH * (v / max);
+    const x = PL + i * step + (step - barW) / 2;
+    const y = PT + innerH - h;
+    const cls = r.titleYear ? "bar title" : "bar";
+    body += '<rect class="' + cls + '" x="' + x + '" y="' + y + '" width="' + barW + '" height="' + h + '">' +
+            '<title>' + r.season + " — " + v + ' pts (est.)' + '</title></rect>';
+    if (r.titleYear) {
+      body += '<text class="value" x="' + (x + barW/2) + '" y="' + (y - 3) + '" text-anchor="middle">' + v + '</text>';
+    }
+  });
+  // x labels (every 3rd to avoid clutter)
+  seasons.forEach((r, i) => {
+    if (i % 3 !== 0 && i !== seasons.length - 1) return;
+    const x = PL + i * step + step / 2;
+    body += '<text class="label-x" x="' + x + '" y="' + (PT + innerH + 14) + '" text-anchor="middle" transform="rotate(-30 ' + x + ' ' + (PT + innerH + 14) + ')">' + r.season + '</text>';
+  });
+  return svg("0 0 " + W + " " + H, body, "Bar chart: estimated league points per season, 2003-04 to 2025-26. Title-winning seasons highlighted in orange.");
+}
+
+// Line chart — League finishing position (inverted Y)
+function chartPosition() {
+  const W = 600, H = 260, PL = 32, PR = 8, PT = 12, PB = 50;
+  const innerW = W - PL - PR, innerH = H - PT - PB;
+  const seasons = data.seasonRecords;
+  const maxPos = 14; // axis range 1..14
+  const xAt = (i) => PL + (innerW * i / Math.max(1, seasons.length - 1));
+  const yAt = (pos) => PT + ((pos - 1) / (maxPos - 1)) * innerH; // 1 → top
+
+  let body = "";
+  // gridlines for positions 1, 4, 7, 10, 13
+  [1, 4, 7, 10, 13].forEach(p => {
+    const y = yAt(p);
+    body += '<line x1="' + PL + '" x2="' + (W - PR) + '" y1="' + y + '" y2="' + y + '" stroke="var(--border)" stroke-dasharray="2 2" opacity="0.55"/>';
+    body += '<text class="label-x" x="' + (PL - 6) + '" y="' + (y + 3) + '" text-anchor="end">' + p + (p === 1 ? "st" : p === 4 ? "th" : p === 7 ? "th" : p === 10 ? "th" : "th") + '</text>';
+  });
+  // line
+  const path = seasons.map((r, i) => (i ? "L" : "M") + xAt(i).toFixed(1) + " " + yAt(r.pos).toFixed(1)).join(" ");
+  body += '<path class="line" d="' + path + '"/>';
+  // dots
+  seasons.forEach((r, i) => {
+    const cls = r.titleYear ? "dot title" : "dot";
+    body += '<circle class="' + cls + '" cx="' + xAt(i).toFixed(1) + '" cy="' + yAt(r.pos).toFixed(1) + '" r="' + (r.titleYear ? 4.5 : 3) + '">' +
+            '<title>' + r.season + " — finished " + r.pos + (r.titleYear ? " (champions)" : "") + '</title></circle>';
+  });
+  // x labels (every 3rd)
+  seasons.forEach((r, i) => {
+    if (i % 3 !== 0 && i !== seasons.length - 1) return;
+    const x = xAt(i);
+    body += '<text class="label-x" x="' + x + '" y="' + (PT + innerH + 14) + '" text-anchor="middle" transform="rotate(-30 ' + x + ' ' + (PT + innerH + 14) + ')">' + r.season + '</text>';
+  });
+  return svg("0 0 " + W + " " + H, body, "Line chart: league finishing position by season. Y-axis inverted so first place is at the top.");
+}
+
+// Dual line — Tries scored vs conceded
+function chartTries() {
+  const W = 600, H = 260, PL = 32, PR = 8, PT = 12, PB = 50;
+  const innerW = W - PL - PR, innerH = H - PT - PB;
+  const seasons = data.seasonRecords;
+  // No per-season tries data — derive an estimate as PF/5 and PA/5 proxy (rough; flagged in caption)
+  const tf = seasons.map(r => Math.round(r.pf / 5));
+  const ta = seasons.map(r => Math.round(r.pa / 5));
+  const max = Math.ceil(Math.max(...tf, ...ta) / 10) * 10;
+  const xAt = i => PL + (innerW * i / Math.max(1, seasons.length - 1));
+  const yAt = v => PT + innerH - (innerH * v / max);
+
+  let body = "";
+  for (let i = 0; i <= 4; i++) {
+    const y = PT + innerH - (innerH * i / 4);
+    const v = Math.round(max * i / 4);
+    body += '<line x1="' + PL + '" x2="' + (W - PR) + '" y1="' + y + '" y2="' + y + '" stroke="var(--border)" stroke-dasharray="2 2" opacity="0.55"/>';
+    body += '<text class="label-x" x="' + (PL - 6) + '" y="' + (y + 3) + '" text-anchor="end">' + v + '</text>';
+  }
+  const pTF = seasons.map((r, i) => (i ? "L" : "M") + xAt(i).toFixed(1) + " " + yAt(tf[i]).toFixed(1)).join(" ");
+  const pTA = seasons.map((r, i) => (i ? "L" : "M") + xAt(i).toFixed(1) + " " + yAt(ta[i]).toFixed(1)).join(" ");
+  body += '<path class="line"     d="' + pTF + '"/>';
+  body += '<path class="line alt" d="' + pTA + '"/>';
+  seasons.forEach((r, i) => {
+    body += '<circle class="dot"     cx="' + xAt(i) + '" cy="' + yAt(tf[i]) + '" r="2.5"><title>' + r.season + ' tries scored ~' + tf[i] + '</title></circle>';
+    body += '<circle class="dot alt" cx="' + xAt(i) + '" cy="' + yAt(ta[i]) + '" r="2.5"><title>' + r.season + ' tries conceded ~' + ta[i] + '</title></circle>';
+  });
+  seasons.forEach((r, i) => {
+    if (i % 3 !== 0 && i !== seasons.length - 1) return;
+    const x = xAt(i);
+    body += '<text class="label-x" x="' + x + '" y="' + (PT + innerH + 14) + '" text-anchor="middle" transform="rotate(-30 ' + x + ' ' + (PT + innerH + 14) + ')">' + r.season + '</text>';
+  });
+  return svg("0 0 " + W + " " + H, body, "Dual line chart: tries scored versus tries conceded by season.");
+}
+
+// Bar — Win percentage by season
+function chartWinPct() {
+  const W = 600, H = 260, PL = 32, PR = 8, PT = 12, PB = 50;
+  const innerW = W - PL - PR, innerH = H - PT - PB;
+  const seasons = data.seasonRecords;
+  const pct = seasons.map(r => r.p ? Math.round(100 * r.w / r.p) : 0);
+  const max = 100;
+  const barW = innerW / seasons.length * 0.7;
+  const step = innerW / seasons.length;
+
+  let body = "";
+  [0, 25, 50, 75, 100].forEach(v => {
+    const y = PT + innerH - (innerH * v / max);
+    body += '<line x1="' + PL + '" x2="' + (W - PR) + '" y1="' + y + '" y2="' + y + '" stroke="var(--border)" stroke-dasharray="2 2" opacity="0.55"/>';
+    body += '<text class="label-x" x="' + (PL - 6) + '" y="' + (y + 3) + '" text-anchor="end">' + v + '%</text>';
+  });
+  seasons.forEach((r, i) => {
+    const h = innerH * (pct[i] / max);
+    const x = PL + i * step + (step - barW) / 2;
+    const y = PT + innerH - h;
+    const cls = r.titleYear ? "bar title" : (pct[i] >= 60 ? "bar brand" : "bar");
+    body += '<rect class="' + cls + '" x="' + x + '" y="' + y + '" width="' + barW + '" height="' + h + '">' +
+            '<title>' + r.season + " — " + pct[i] + "% win rate (" + r.w + "W of " + r.p + ")" + '</title></rect>';
+  });
+  seasons.forEach((r, i) => {
+    if (i % 3 !== 0 && i !== seasons.length - 1) return;
+    const x = PL + i * step + step / 2;
+    body += '<text class="label-x" x="' + x + '" y="' + (PT + innerH + 14) + '" text-anchor="middle" transform="rotate(-30 ' + x + ' ' + (PT + innerH + 14) + ')">' + r.season + '</text>';
+  });
+  return svg("0 0 " + W + " " + H, body, "Bar chart: win percentage by season.");
+}
+
+// Horizontal bar — top scorers / top apps
+function chartHorizontal(items, valueKey, label, valueSuffix) {
+  const W = 600, RowH = 22, PT = 8, PB = 8, PL = 130, PR = 32;
+  const H = PT + PB + items.length * RowH;
+  const innerW = W - PL - PR;
+  const max = Math.max(...items.map(i => i[valueKey]));
+
+  let body = "";
+  items.forEach((it, i) => {
+    const y = PT + i * RowH;
+    const w = innerW * (it[valueKey] / max);
+    // name (left)
+    body += '<text class="h-name" x="' + (PL - 6) + '" y="' + (y + RowH * 0.7) + '" text-anchor="end">' + escapeHTML(it.name) + '</text>';
+    // bar background (faint)
+    body += '<rect x="' + PL + '" y="' + (y + 4) + '" width="' + innerW + '" height="' + (RowH - 8) + '" rx="3" fill="var(--card-elevated)"/>';
+    // bar
+    body += '<rect class="h-bar-fill" x="' + PL + '" y="' + (y + 4) + '" width="' + w + '" height="' + (RowH - 8) + '" rx="3">' +
+            '<title>' + it.name + " — " + it[valueKey] + " " + label + " (" + it.era + ")" + '</title></rect>';
+    // value (right of bar)
+    body += '<text class="h-val" x="' + (PL + w + 6) + '" y="' + (y + RowH * 0.7) + '">' + it[valueKey] + (valueSuffix || "") + '</text>';
+  });
+  return svg("0 0 " + W + " " + H, body, "Horizontal bar chart: top " + items.length + " " + label + ".");
+}
+
+function renderAnalytics() {
+  const grid = $("#chartsGrid");
+  if (!grid) return;
+  grid.innerHTML = "";
+
+  // 1. Points per season
+  grid.appendChild(chartCard({
+    title: "Estimated league points per season",
+    body: chartPointsPerSeason(),
+    caption: "Estimated as 4×W + 2×D + ~60% of wins as bonus points. Title-winning seasons highlighted in orange.",
+    legend: '<div class="legend"><span><i style="background: var(--brand)"></i> Title year</span><span><i style="background: var(--text-secondary)"></i> Other seasons</span></div>'
+  }));
+
+  // 2. Position (inverted)
+  grid.appendChild(chartCard({
+    title: "League finishing position",
+    body: chartPosition(),
+    caption: "Inverted Y axis — first place is at the top. Title years marked with a larger orange dot."
+  }));
+
+  // 3. Tries dual-line
+  grid.appendChild(chartCard({
+    title: "Tries scored vs conceded (estimate)",
+    body: chartTries(),
+    caption: "Estimate derived from points-for and points-against (~5 pts/try proxy). Replace with actual try counts when available.",
+    legend: '<div class="legend"><span><i style="background: var(--brand)"></i> Tries scored</span><span><i style="background: var(--heritage-blue)"></i> Tries conceded</span></div>'
+  }));
+
+  // 4. Win % bar
+  grid.appendChild(chartCard({
+    title: "Win percentage by season",
+    body: chartWinPct(),
+    caption: "Wins as a share of regular-season matches played. Bars at 60%+ shown in orange."
+  }));
+
+  // 5. Top try scorers
+  grid.appendChild(chartCard({
+    title: "Top try scorers (all-time, top 15)",
+    body: chartHorizontal(data.topTryScorers, "tries", "tries", ""),
+    caption: "Career Ospreys try totals. Best-estimate aggregates pending verification."
+  }));
+
+  // 6. Top appearances
+  grid.appendChild(chartCard({
+    title: "Top appearance makers (all-time, top 15)",
+    body: chartHorizontal(data.topAppearances, "apps", "appearances", ""),
+    caption: "Career Ospreys appearance totals. Best-estimate aggregates pending verification."
+  }));
+}
+
+/* --- Phase 6 renderers ---------------------------------------------- */
+
+function renderCoaches() {
+  const grid = $("#coachGrid");
+  if (!grid) return;
+  grid.innerHTML = "";
+  data.coaches.forEach(c => {
+    const card = document.createElement("article");
+    card.className = "coach-card" + (c.current ? " current" : "");
+    const trophyChips = c.trophies.length
+      ? '<div class="trophies">' + c.trophies.map(t => '<span class="chip">' + escapeHTML(t) + '</span>').join("") + '</div>'
+      : '<p class="meta" style="color:var(--text-muted)">No major trophies</p>';
+    card.innerHTML =
+      '<div class="head">' +
+        '<div class="avatar" aria-hidden="true">' + initials(c.name) + '</div>' +
+        '<div>' +
+          '<div class="tenure">' + escapeHTML(c.tenure) + (c.current ? ' · CURRENT' : '') + '</div>' +
+          '<h3>' + escapeHTML(c.name) + '</h3>' +
+          '<div class="meta">' + escapeHTML(c.era) + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="stats" aria-label="Win record">' +
+        '<div><div class="v">' + c.matches + '</div><div class="k">Matches</div></div>' +
+        '<div><div class="v">' + c.w + 'W</div><div class="k">' + c.d + 'D · ' + c.l + 'L</div></div>' +
+        '<div><div class="v">' + c.winPct + '%</div><div class="k">Win rate</div></div>' +
+      '</div>' +
+      '<p>' + escapeHTML(c.style) + '</p>' +
+      trophyChips;
+    grid.appendChild(card);
+  });
+}
+
+function renderVenue() {
+  const main = $("#venueMain");
+  const heritage = $("#venueHeritage");
+  if (!main || !heritage) return;
+
+  // Stadium illustration: stylised stand silhouette with pitch markings (no real-world photography needed)
+  const stadiumSvg =
+    '<svg viewBox="0 0 200 125" aria-hidden="true">' +
+      // pitch
+      '<rect x="20" y="40" width="160" height="65" rx="8" fill="#0f3a1d"/>' +
+      // pitch lines
+      '<line x1="100" y1="40" x2="100" y2="105" stroke="#1f6e3a" stroke-width="1"/>' +
+      '<rect x="22" y="42" width="156" height="61" rx="6" fill="none" stroke="#1f6e3a" stroke-width="0.5"/>' +
+      '<rect x="22" y="60" width="22" height="25" fill="none" stroke="#1f6e3a" stroke-width="0.5"/>' +
+      '<rect x="156" y="60" width="22" height="25" fill="none" stroke="#1f6e3a" stroke-width="0.5"/>' +
+      // stands silhouette
+      '<path d="M10 40 L100 18 L190 40 Z" fill="#1A1A1A" stroke="#F47920" stroke-width="1.5"/>' +
+      // brand mark
+      '<path d="M85 30 L100 22 L115 30" stroke="#F47920" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' +
+      // floodlights
+      '<circle cx="40"  cy="42" r="2" fill="#F47920"/>' +
+      '<circle cx="100" cy="20" r="2" fill="#F47920"/>' +
+      '<circle cx="160" cy="42" r="2" fill="#F47920"/>' +
+    '</svg>';
+
+  const v = data.venue.main;
+  main.innerHTML =
+    '<div class="venue-hero">' +
+      '<div class="venue-illustration">' + stadiumSvg + '</div>' +
+      '<div>' +
+        '<h3>' + escapeHTML(v.name) + '</h3>' +
+        '<div class="alias">' + escapeHTML(v.alias) + '</div>' +
+        '<p>' + escapeHTML(v.desc) + '</p>' +
+        '<div class="venue-stats">' +
+          '<div class="venue-stat"><div class="v">' + escapeHTML(v.capacity) + '</div><div class="k">Capacity</div></div>' +
+          '<div class="venue-stat"><div class="v">' + v.opened + '</div><div class="k">Opened</div></div>' +
+          '<div class="venue-stat"><div class="v">' + escapeHTML(v.area.split(",")[0]) + '</div><div class="k">Area</div></div>' +
+          '<div class="venue-stat"><div class="v">SCFC</div><div class="k">Co-tenant</div></div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  heritage.innerHTML = "";
+  const grid = document.createElement("div");
+  grid.className = "heritage-grid";
+  data.venue.heritage.forEach(h => {
+    const card = document.createElement("article");
+    card.className = "heritage-card";
+    card.innerHTML =
+      '<span class="ic" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 1 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>' +
+      '<span class="tag-line">' + escapeHTML(h.tag) + ' · ' + escapeHTML(h.years) + '</span>' +
+      '<h3>' + escapeHTML(h.name) + '</h3>' +
+      '<p>' + escapeHTML(h.desc) + '</p>';
+    grid.appendChild(card);
+  });
+  heritage.appendChild(grid);
+}
+
+let cdInterval = null;
+function startCountdown(iso) {
+  if (cdInterval) clearInterval(cdInterval);
+  const target = new Date(iso).getTime();
+  function tick() {
+    let diff = Math.max(0, target - Date.now());
+    const d = Math.floor(diff / 86400000); diff -= d * 86400000;
+    const h = Math.floor(diff / 3600000);  diff -= h * 3600000;
+    const m = Math.floor(diff / 60000);    diff -= m * 60000;
+    const sec = Math.floor(diff / 1000);
+    $("#cdD").textContent = d; $("#cdH").textContent = h;
+    $("#cdM").textContent = m; $("#cdS").textContent = sec;
+  }
+  tick();
+  cdInterval = setInterval(tick, 1000);
+}
+
+/* =========================================================================
+   7. NAVIGATION
+   ========================================================================= */
+const TABS = ["home","squad","fixtures","history","more","analytics","legends","coaches","venue","h2h","honours","settings"];
+const MAIN_TABS = new Set(["home","squad","fixtures","history","more"]);
+
+function setTab(name) {
+  if (!TABS.includes(name)) name = "home";
+  state.currentTab = name;
+  $$(".page").forEach(p => p.classList.remove("active"));
+  const t = document.getElementById("page-" + name);
+  if (t) t.classList.add("active");
+  $$(".desktop-nav button").forEach(b => {
+    b.toggleAttribute("aria-current", false);
+    if (b.dataset.tab === name) b.setAttribute("aria-current", "page");
+  });
+  const showAs = MAIN_TABS.has(name) ? name : "more";
+  $$(".bottom-nav button").forEach(b => {
+    b.toggleAttribute("aria-current", false);
+    if (b.dataset.tab === showAs) b.setAttribute("aria-current", "page");
+  });
+  window.scrollTo({ top: 0, behavior: "instant" in document.documentElement ? "instant" : "auto" });
+}
+
+/* =========================================================================
+   8. SEARCH (Phase 1: searches fixtures + legend spotlight + nav targets)
+   Architecture supports squad/legends/fixtures/history additions in Phase 2+.
+   ========================================================================= */
+function buildSearchIndex() {
+  const idx = [];
+  // Fixtures + results
+  data.fixtures.forEach(f => {
+    const isUpcoming = f.status === "upcoming";
+    const subLine = isUpcoming
+      ? (f.kickoffISO ? formatKickoff(f.kickoffISO) : formatShortDate(f.date)) + " · " + f.venue + " · " + f.comp
+      : formatShortDate(f.date) + " · " + f.sf + "–" + f.sa + " · " + f.comp;
+    idx.push({
+      kind: isUpcoming ? "Fixture" : "Result",
+      title: (f.home ? "Ospreys vs " : "Ospreys @ ") + f.opp,
+      sub: subLine,
+      tab: "fixtures", icon: abbrev(f.opp)
+    });
+  });
+  // Standings rows
+  data.standings.forEach(r => {
+    idx.push({
+      kind: "Standings",
+      title: r.team,
+      sub: r.p + " played · " + r.pts + " pts",
+      tab: "fixtures", icon: abbrev(r.team)
+    });
+  });
+  // Legend spotlight (Phase 2 full list will extend this when populated)
+  data.legendSpotlight.forEach(L => {
+    idx.push({
+      kind: "Legend", title: L.name,
+      sub: L.pos + " · " + L.era,
+      tab: "legends", icon: initials(L.name)
+    });
+  });
+  // Coaches
+  data.coaches.forEach(c => {
+    idx.push({
+      kind: "Coach", title: c.name,
+      sub: "Head coach · " + c.tenure + (c.current ? " · current" : ""),
+      tab: "coaches", icon: initials(c.name)
+    });
+  });
+  // History eras
+  data.historyEras.forEach(e => {
+    idx.push({
+      kind: "History", title: e.title,
+      sub: e.years + " · " + e.body.slice(0, 80) + (e.body.length > 80 ? "…" : ""),
+      tab: "history", icon: e.years.split("–")[0].slice(0, 4)
+    });
+  });
+  // Season records
+  data.seasonRecords.forEach(r => {
+    idx.push({
+      kind: "Season", title: r.season + " — " + r.comp,
+      sub: r.w + "W " + r.d + "D " + r.l + "L · pos " + r.pos + " · " + (r.titleYear ? "★ Champions · " : "") + (r.captain || ""),
+      tab: "history", icon: r.season.slice(0, 4)
+    });
+  });
+  // Honours / trophies
+  data.honours.trophies.forEach(t => {
+    idx.push({
+      kind: "Honour", title: t.name + " — " + t.year,
+      sub: t.kind + " · " + t.desc.slice(0, 80) + (t.desc.length > 80 ? "…" : ""),
+      tab: "honours", icon: "★"
+    });
+  });
+  // Lions tourists
+  data.lionsTourists.forEach(L => {
+    idx.push({
+      kind: "Lions", title: L.name,
+      sub: "Lions " + L.year + " · " + L.dest,
+      tab: "honours", icon: initials(L.name)
+    });
+  });
+  // Head-to-head
+  data.headToHead.forEach(h => {
+    idx.push({
+      kind: "Head-to-head", title: "vs " + h.opp,
+      sub: h.p + " played · " + h.w + "W " + h.l + "L" + (h.derby ? " · derby" : ""),
+      tab: "h2h", icon: abbrev(h.opp)
+    });
+  });
+  // Venue
+  idx.push({
+    kind: "Venue", title: data.venue.main.name,
+    sub: data.venue.main.alias + " · " + data.venue.main.area,
+    tab: "venue", icon: "OSP"
+  });
+  data.venue.heritage.forEach(h => {
+    idx.push({
+      kind: "Venue", title: h.name,
+      sub: h.tag + " · " + h.years,
+      tab: "venue", icon: initials(h.name)
+    });
+  });
+  // Nav destinations (jump-to)
+  TABS.forEach(t => {
+    idx.push({
+      kind: "Page", title: dict()["nav" + cap(t)] || cap(t),
+      sub: "Jump to page",
+      tab: t, icon: "→"
+    });
+  });
+  return idx;
+}
+function cap(s) { return s ? s[0].toUpperCase() + s.slice(1) : s; }
+
+function runSearch(q) {
+  const out = $("#searchResults");
+  out.innerHTML = "";
+  const idx = buildSearchIndex();
+  const term = (q || "").trim().toLowerCase();
+  if (!term) {
+    out.innerHTML = '<div class="empty">Type to search across squad, fixtures, results, history, legends, coaches, honours, head-to-head and venue. Use ↑ ↓ to navigate, Enter to open.</div>';
+    return;
+  }
+  // Score: title match > sub match > kind match
+  const hits = idx
+    .map(i => {
+      const t = i.title.toLowerCase(), s = i.sub.toLowerCase(), k = i.kind.toLowerCase();
+      let score = 0;
+      if (t === term) score += 100;
+      if (t.startsWith(term)) score += 30;
+      if (t.includes(term)) score += 10;
+      if (s.includes(term)) score += 3;
+      if (k.includes(term)) score += 1;
+      return { ...i, score };
+    })
+    .filter(i => i.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 14);
+  if (!hits.length) {
+    out.innerHTML = '<div class="empty">No results for "' + escapeHTML(q) + '".</div>';
+    return;
+  }
+  hits.forEach((h, i) => {
+    const btn = document.createElement("button");
+    btn.className = "r"; btn.type = "button"; btn.dataset.tab = h.tab;
+    btn.setAttribute("role", "option");
+    btn.setAttribute("aria-selected", String(i === 0));
+    btn.tabIndex = -1;
+    btn.innerHTML =
+      '<span class="ic" aria-hidden="true">' + escapeHTML(h.icon) + '</span>' +
+      '<span><span class="t">' + escapeHTML(h.title) + '</span><br><span class="s">' + escapeHTML(h.kind) + ' · ' + escapeHTML(h.sub) + '</span></span>' +
+      '<span class="chip">' + escapeHTML(h.kind) + '</span>';
+    btn.addEventListener("click", () => { closeSearch(); setTab(h.tab); });
+    out.appendChild(btn);
+  });
+}
+
+// Search keyboard navigation
+function moveSearchSelection(delta) {
+  const items = $$("#searchResults .r");
+  if (!items.length) return;
+  const cur = items.findIndex(it => it.getAttribute("aria-selected") === "true");
+  let next = (cur === -1 ? 0 : cur + delta);
+  if (next < 0) next = items.length - 1;
+  if (next >= items.length) next = 0;
+  items.forEach((it, i) => it.setAttribute("aria-selected", String(i === next)));
+  items[next].scrollIntoView({ block: "nearest" });
+}
+
+function activateSearchSelection() {
+  const sel = $('#searchResults .r[aria-selected="true"]');
+  if (sel) sel.click();
+}
+
+let lastFocus = null;
+function openSearch() {
+  state.searchOpen = true;
+  lastFocus = document.activeElement;
+  const ov = $("#searchOverlay");
+  ov.classList.add("active");
+  setTimeout(() => $("#searchInput").focus(), 30);
+  runSearch("");
+}
+function closeSearch() {
+  state.searchOpen = false;
+  $("#searchOverlay").classList.remove("active");
+  $("#searchInput").value = "";
+  if (lastFocus && typeof lastFocus.focus === "function") lastFocus.focus();
+}
+
+/* =========================================================================
+   9. EVENT HANDLERS
+   ========================================================================= */
+function setupEvents() {
+  // Tab switching from anywhere with [data-tab]
+  document.addEventListener("click", e => {
+    const btn = e.target.closest("[data-tab]");
+    if (!btn) return;
+    e.preventDefault();
+    setTab(btn.dataset.tab);
+  });
+
+  // Theme + lang
+  $("#themeToggle").addEventListener("click", () => applyTheme(state.theme === "dark" ? "light" : "dark"));
+  $("#setTheme").addEventListener("click",   () => applyTheme(state.theme === "dark" ? "light" : "dark"));
+  $("#langToggle").addEventListener("click", () => applyLang(state.lang === "cy" ? "en" : "cy"));
+  $("#setLang").addEventListener("click",    () => applyLang(state.lang === "cy" ? "en" : "cy"));
+
+  // Fixtures sub-tabs
+  $$("#page-fixtures .sub-tabs button").forEach(b => {
+    b.addEventListener("click", () => {
+      state.fixtures.sub = b.dataset.sub;
+      renderFixturesPage();
+    });
+  });
+  // Fixtures filter chips
+  $$("#fixFilters button").forEach(b => {
+    b.addEventListener("click", () => {
+      state.fixtures.filter = b.dataset.filter;
+      $$("#fixFilters button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+      if (state.fixtures.sub !== "standings") renderFixturesPage();
+    });
+  });
+  // History sub-tabs
+  $$("#page-history .sub-tabs button").forEach(b => {
+    b.addEventListener("click", () => {
+      phase4State.historySub = b.dataset.sub;
+      renderHistoryPage();
+    });
+  });
+  // H2H filter chips
+  $$("#h2hFilters button").forEach(b => {
+    b.addEventListener("click", () => {
+      phase4State.h2hFilter = b.dataset.h2h;
+      $$("#h2hFilters button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+      renderH2H();
+    });
+  });
+
+  // Search
+  $("#searchTrigger").addEventListener("click", openSearch);
+  $("#searchClose").addEventListener("click", closeSearch);
+  $("#searchOverlay").addEventListener("click", e => { if (e.target.id === "searchOverlay") closeSearch(); });
+  $("#searchInput").addEventListener("input", e => runSearch(e.target.value));
+  // Keyboard nav inside the search overlay (input + result list)
+  $("#searchInput").addEventListener("keydown", e => {
+    if (e.key === "ArrowDown") { e.preventDefault(); moveSearchSelection(1); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); moveSearchSelection(-1); }
+    else if (e.key === "Enter")   { e.preventDefault(); activateSearchSelection(); }
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && state.searchOpen) { e.preventDefault(); closeSearch(); }
+    // Cmd/Ctrl + K opens search
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+      e.preventDefault();
+      state.searchOpen ? closeSearch() : openSearch();
+    }
+  });
+  // Focus trap inside the search overlay (Tab cycles within input + close button)
+  $("#searchOverlay").addEventListener("keydown", e => {
+    if (e.key !== "Tab" || !state.searchOpen) return;
+    const focusables = [$("#searchInput"), $("#searchClose")];
+    const first = focusables[0], last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+}
+
+/* =========================================================================
+   10. INIT
+   ========================================================================= */
+function init() {
+  // Restore preferences
+  const t = storage.get("oslv.theme"); applyTheme(t === "light" ? "light" : "dark");
+  const l = storage.get("oslv.lang");  applyLang(l === "cy" ? "cy" : "en");
+
+  // Storage status row in Settings
+  const chip = $("#storageChip"), desc = $("#storageStatusDesc");
+  if (chip && desc) {
+    if (state.storageOk) { chip.textContent = "On"; chip.classList.add("success"); desc.textContent = "Preferences will persist between visits."; }
+    else                 { chip.textContent = "Off"; chip.classList.add("draw");     desc.textContent = "Sandbox mode — preferences won't persist."; }
+  }
+
+  setupEvents();
+  renderHome();
+  renderFixturesPage();
+  renderHistoryPage();
+  renderHonours();
+  renderH2H();
+  renderAnalytics();
+  renderCoaches();
+  renderVenue();
+  setTab("home");
+}
+
+init();
+</script>
+</body>
+</html>
