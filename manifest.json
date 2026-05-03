@@ -1,0 +1,28 @@
+{
+  "name": "Ospreylia FanView",
+  "short_name": "Ospreylia",
+  "description": "Unofficial Ospreys supporter companion — built by fans, for fans.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#0A0A0A",
+  "background_color": "#0A0A0A",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["sports", "entertainment", "news"],
+  "icons": [
+    {
+      "src": "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20512%20512%22%3E%3Crect%20width%3D%22512%22%20height%3D%22512%22%20fill%3D%22%230A0A0A%22%2F%3E%3Cpath%20d%3D%22M256%2056%20L432%20128%20V248%20Q432%20384%20256%20480%20Q80%20384%2080%20248%20V128%20Z%22%20fill%3D%22%23141414%22%20stroke%3D%22%23F47920%22%20stroke-width%3D%2216%22%2F%3E%3Cpath%20d%3D%22M152%20272%20L256%20168%20L360%20272%22%20stroke%3D%22%23F47920%22%20stroke-width%3D%2228%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpath%20d%3D%22M176%20368%20L256%20288%20L336%20368%22%20stroke%3D%22%23F47920%22%20stroke-width%3D%2224%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20opacity%3D%220.55%22%2F%3E%3C%2Fsvg%3E",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20512%20512%22%3E%3Crect%20width%3D%22512%22%20height%3D%22512%22%20rx%3D%2296%22%20fill%3D%22%230A0A0A%22%2F%3E%3Cpath%20d%3D%22M256%2096%20L412%20160%20V256%20Q412%20384%20256%20460%20Q100%20384%20100%20256%20V160%20Z%22%20fill%3D%22%23141414%22%20stroke%3D%22%23F47920%22%20stroke-width%3D%2218%22%2F%3E%3Cpath%20d%3D%22M152%20272%20L256%20168%20L360%20272%22%20stroke%3D%22%23F47920%22%20stroke-width%3D%2230%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpath%20d%3D%22M176%20368%20L256%20288%20L336%20368%22%20stroke%3D%22%23F47920%22%20stroke-width%3D%2226%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20opacity%3D%220.55%22%2F%3E%3C%2Fsvg%3E",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -15,19 +15,21 @@ A single-file HTML web app for Ospreys rugby fans. Every screen is rendered loca
 | Page | Contents |
 | --- | --- |
 | **Home** | Next-match countdown, URC league position, last 5 form, season summary, history snapshot, legend spotlight |
-| **Squad** | Senior squad placeholder (full Phase 2 data lives in `ospreys-rugby.html`) |
-| **Fixtures** | 2025–26 fixtures, results with try scorers, full sortable URC standings |
+| **Squad** | 2025–26 senior squad — 27 players grouped by position with caps, tries, Test caps, captain / international / Lions badges |
+| **Fixtures** | 2025–26 fixtures, results with try scorers and expandable match detail (HT score, referee, attendance), full sortable URC standings |
 | **History** | 7-era timeline + 23-season records table (2003–04 → 2025–26) |
 | **Honours** | 4 league titles, Anglo-Welsh Cup 2008, Australia 2006, 21 Lions tourists |
 | **Head-to-Head** | All-time records vs every opponent, Welsh derbies highlighted |
 | **Analytics** | 6 inline-SVG charts — points, position, tries, win %, top scorers, top apps |
+| **Legends** | 16 iconic Ospreys profiles — Shane Williams · Alun Wyn Jones · Henson · Hook · Biggar · Tipuric · Adam Jones · Collins · Holah · Bowe · Byrne · Phillips · Ryan Jones · George North · Gibbs · Lydiate |
 | **Coaches** | Every head coach 2003–present with tenure, win rate, trophies |
-| **Venue** | Swansea.com Stadium + St Helen's + The Gnoll heritage |
+| **Venue** | Brewery Field (current 2025–26) · St Helen's (long-term home from 2026–27) · Swansea.com Stadium (former 2005–24) · plus heritage grounds |
 | **Settings** | Dark/light theme, Welsh toggle, storage status |
 
 ## Stack
 
-- **Single HTML file** — `ospreylia-fanview.html` (≈ 111 KB)
+- **Single HTML file** — `ospreylia-fanview.html` (≈ 184 KB)
+- **PWA** — manifest + service worker (offline-first, install to home screen)
 - **Vanilla JS, embedded CSS, embedded data** — no build step, no dependencies
 - **`localStorage`** with safe-fallback wrapper for theme + language
 - **CSP** locked to `'self'` — no third-party scripts, fonts or images
@@ -41,7 +43,9 @@ The app is also published as `index.html` so it serves as the root document on N
 ospreysrugby/
 ├── index.html              # entry point (= ospreylia-fanview.html)
 ├── ospreylia-fanview.html  # canonical filename
-├── netlify.toml            # security headers
+├── manifest.json           # PWA manifest (install to home screen)
+├── sw.js                   # service worker (offline cache)
+├── netlify.toml            # security headers + CSP mirror
 └── README.md
 ```
 

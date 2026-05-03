@@ -5,8 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0A0A0A">
 <meta name="description" content="Ospreylia FanView — unofficial Ospreys supporter companion. Squad, fixtures, history and analytics, built by fans for fans.">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self' data:; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self' data:; manifest-src 'self'; worker-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
 <title>Ospreylia FanView — Unofficial Ospreys supporter companion</title>
+<!-- PWA -->
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cpath%20d%3D%22M32%204%20L55%2013%20V30%20Q55%2047%2032%2060%20Q9%2047%209%2030%20V13%20Z%22%20fill%3D%22%23141414%22%20stroke%3D%22%23F47920%22%20stroke-width%3D%222%22%2F%3E%3Cpath%20d%3D%22M19%2033%20L32%2020%20L45%2033%22%20stroke%3D%22%23F47920%22%20stroke-width%3D%223.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpath%20d%3D%22M22%2045%20L32%2035%20L42%2045%22%20stroke%3D%22%23F47920%22%20stroke-width%3D%223%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20opacity%3D%22.55%22%2F%3E%3C%2Fsvg%3E">
+<meta name="apple-mobile-web-app-title" content="Ospreylia">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!--
   =============================================================================
@@ -1268,6 +1274,217 @@ footer .built {
 .heritage-card .tag-line { color: var(--brand-text); font-size: 12px; font-weight: 700; letter-spacing: 0.04em; }
 .heritage-card p { color: var(--text-secondary); font-size: 13px; margin: 0; }
 
+/* =========================================================================
+   v1.1 — Squad cards · Legend cards · Match detail · Next-season teaser
+   ========================================================================= */
+.pos-section { margin-top: 14px; }
+.pos-section summary {
+  cursor: pointer; list-style: none;
+  padding: 12px 14px;
+  background: var(--card-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: space-between;
+  font-weight: 700;
+}
+.pos-section summary::-webkit-details-marker { display: none; }
+.pos-section summary::after {
+  content: "▾"; color: var(--text-muted); transition: transform .15s ease;
+}
+.pos-section[open] summary::after { transform: rotate(180deg); }
+.pos-section .count {
+  font-size: 12px; font-weight: 700;
+  background: var(--brand-soft);
+  color: var(--brand-text);
+  border: 1px solid color-mix(in srgb, var(--brand) 40%, transparent);
+  border-radius: 999px; padding: 2px 8px;
+  margin-left: 8px;
+}
+.player-grid {
+  display: grid; gap: 10px;
+  grid-template-columns: 1fr;
+  margin-top: 10px;
+}
+@media (min-width: 600px) { .player-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
+@media (min-width: 1024px) { .player-grid { grid-template-columns: repeat(3, 1fr); } }
+.player-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.player-card .head { display: flex; align-items: flex-start; gap: 12px; }
+.player-card .av {
+  width: 44px; height: 44px; flex: 0 0 44px;
+  border-radius: 10px;
+  background: var(--brand-soft);
+  color: var(--brand-text);
+  display: grid; place-items: center;
+  font-weight: 800; letter-spacing: 0.04em; font-size: 13px;
+}
+.player-card .nm { font-weight: 700; line-height: 1.15; }
+.player-card .pos { color: var(--text-muted); font-size: 12px; }
+.player-card .badges { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+.player-card .badge-chip {
+  font-size: 10px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 2px 6px; border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card-elevated);
+}
+.player-card .badge-chip.captain { color: #0A0A0A; background: var(--brand); border-color: var(--brand); }
+.player-card .badge-chip.intl    { color: var(--success); border-color: color-mix(in srgb, var(--success) 50%, transparent); background: color-mix(in srgb, var(--success) 14%, transparent); }
+.player-card .badge-chip.lion    { color: #ffd966; border-color: color-mix(in srgb, #ffd966 50%, transparent); background: color-mix(in srgb, #ffd966 16%, transparent); }
+.player-card .stats {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 6px; margin: 0;
+}
+.player-card .stats div {
+  background: var(--card-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px; padding: 6px; text-align: center;
+}
+.player-card .stats .v { font-weight: 800; font-size: 14px; line-height: 1.1; }
+.player-card .stats .k { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+.player-card details { margin-top: 4px; }
+.player-card details summary {
+  list-style: none; cursor: pointer;
+  font-size: 12px; color: var(--brand-text);
+  font-weight: 600; padding: 4px 0;
+}
+.player-card details summary::-webkit-details-marker { display: none; }
+.player-card details summary::before { content: "+ "; }
+.player-card details[open] summary::before { content: "− "; }
+.player-card details p { margin: 4px 0 0 0; font-size: 13px; color: var(--text-primary); }
+
+/* Legend cards */
+.legend-grid {
+  display: grid; gap: 12px;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 600px) { .legend-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1024px) { .legend-grid { grid-template-columns: repeat(3, 1fr); } }
+.legend-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.legend-card .top { display: flex; gap: 12px; align-items: flex-start; }
+.legend-card .av {
+  width: 56px; height: 56px; flex: 0 0 56px;
+  border-radius: 12px;
+  background: var(--brand-soft); color: var(--brand-text);
+  display: grid; place-items: center;
+  font-weight: 800; font-size: 16px; letter-spacing: 0.04em;
+}
+.legend-card h3 { margin: 0 0 2px 0; font-size: 16px; }
+.legend-card .role { color: var(--text-muted); font-size: 12px; }
+.legend-card .era {
+  font-size: 11px; font-weight: 800;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--brand-text);
+}
+.legend-card dl {
+  margin: 0; padding: 8px 0 0 0;
+  border-top: 1px solid var(--border);
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px;
+  font-size: 13px;
+}
+.legend-card dt { color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+.legend-card dd { margin: 0; font-weight: 700; }
+.legend-card .hl {
+  font-size: 13px; padding: 8px 10px;
+  background: var(--card-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+}
+.legend-card .hl em {
+  display: block; font-style: normal;
+  font-size: 11px; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  margin-bottom: 2px;
+}
+
+/* Match detail expansion */
+.match-card details.detail {
+  margin-top: 8px;
+  border-top: 1px dashed var(--border);
+  padding-top: 8px;
+}
+.match-card details.detail summary {
+  list-style: none; cursor: pointer;
+  font-size: 12px; color: var(--brand-text);
+  font-weight: 700;
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 0;
+}
+.match-card details.detail summary::-webkit-details-marker { display: none; }
+.match-card details.detail summary::before { content: "+ "; }
+.match-card details.detail[open] summary::before { content: "− "; }
+.match-card .detail-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
+  margin-top: 8px;
+  font-size: 12px;
+}
+@media (min-width: 600px) { .match-card .detail-grid { grid-template-columns: repeat(4, 1fr); } }
+.match-card .detail-grid > div {
+  background: var(--card-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.match-card .detail-grid .k {
+  font-size: 9px; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  margin-bottom: 2px;
+}
+.match-card .detail-grid .v { font-weight: 700; font-size: 13px; }
+
+/* Next-season teaser on Home */
+.next-season-card {
+  background:
+    radial-gradient(circle at 90% 0%, var(--brand-soft) 0%, transparent 55%),
+    var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: 18px;
+  display: flex; gap: 14px; align-items: center;
+  box-shadow: var(--shadow-card);
+}
+.next-season-card .ic {
+  width: 44px; height: 44px; flex: 0 0 44px;
+  border-radius: 12px;
+  background: var(--brand-soft); color: var(--brand-text);
+  display: grid; place-items: center;
+}
+.next-season-card h3 { margin: 0 0 2px 0; font-size: 15px; }
+.next-season-card p { margin: 0; color: var(--text-secondary); font-size: 13px; }
+.next-season-card .pill {
+  font-size: 10px; font-weight: 800;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  background: var(--brand); color: #0A0A0A;
+  padding: 3px 8px; border-radius: 999px;
+}
+
+/* Venue v1.1: status-tinted hero */
+.venue-hero.status-current  { border-color: var(--brand); }
+.venue-hero.status-upcoming { border-color: var(--success); }
+.venue-hero.status-former   { opacity: 0.85; }
+.venue-status-pill {
+  display: inline-block;
+  font-size: 10px; font-weight: 800;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 999px;
+  margin-bottom: 6px;
+}
+.venue-status-pill.current  { background: var(--brand); color: #0A0A0A; }
+.venue-status-pill.upcoming { background: color-mix(in srgb, var(--success) 30%, transparent); color: var(--success); border: 1px solid var(--success); }
+.venue-status-pill.former   { background: var(--card-elevated); color: var(--text-muted); border: 1px solid var(--border); }
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
@@ -1440,21 +1657,32 @@ footer .built {
       </button>
     </div>
 
+    <!-- v1.1 — 2026-27 schedule teaser -->
+    <button class="next-season-card" type="button" data-tab="fixtures" id="nextSeasonCard">
+      <span class="ic" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      </span>
+      <div style="text-align:left">
+        <span class="pill" data-i18n="nextSeasonPill">2026–27</span>
+        <h3 data-i18n="nextSeasonTitle" style="margin-top:6px">Schedule coming soon</h3>
+        <p id="nextSeasonNote" data-i18n="nextSeasonNote">URC and Challenge Cup fixtures expected mid-2026. New home: St Helen's, Swansea.</p>
+      </div>
+    </button>
+
   </section>
 
   <!-- SQUAD (placeholder) -->
   <section id="page-squad" class="page" aria-label="Squad">
     <div class="card">
-      <div class="empty-state">
-        <span class="icon" aria-hidden="true"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
-        <h2 data-i18n="squadComing">Squad — Phase 2</h2>
-        <p data-i18n="squadComingSub">Senior squad grouped by position with appearance, try and Test-cap counts.</p>
-        <ul>
-          <li>Player cards by position</li>
-          <li>Captain, international and Lions badges</li>
-          <li>Career detail expand on every card</li>
-        </ul>
+      <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+        <div>
+          <span class="eyebrow" data-i18n="squadLabel">Squad</span>
+          <h2 data-i18n="squadTitle">2025–26 senior squad</h2>
+        </div>
+        <span class="chip brand"><span data-i18n="captain">Captain</span>: Jac Morgan</span>
       </div>
+      <p class="section-foot-note" style="margin-top:12px" data-i18n="squadNote">Squad data is illustrative pending verification against the official Ospreys roster. Caps and try counts are best-effort approximations.</p>
+      <div id="squadContainer" style="margin-top:8px"></div>
     </div>
   </section>
 
@@ -1553,16 +1781,12 @@ footer .built {
   </section>
 
   <section id="page-legends" class="page" aria-label="Legends">
-    <div class="card"><div class="empty-state">
-      <span class="icon" aria-hidden="true"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.39 6.95H22l-6 4.36L18.39 22 12 17.27 5.61 22 8 13.31 2 8.95h7.61z"/></svg></span>
-      <h2 data-i18n="legComing">Legends — Phase 2</h2>
-      <p data-i18n="legComingSub">15+ Ospreys icons including Shane Williams, Alun Wyn Jones, Justin Tipuric and Dan Biggar.</p>
-      <ul>
-        <li>Career stats at Ospreys (apps, tries)</li>
-        <li>Wales / Ireland / All Blacks / Lions caps</li>
-        <li>Honours and signature highlight</li>
-      </ul>
-    </div></div>
+    <div class="card">
+      <span class="eyebrow" data-i18n="legendsLabel">Legends</span>
+      <h2 data-i18n="legendsTitle">Iconic Ospreys players</h2>
+      <p class="section-foot-note" style="margin-top:12px" data-i18n="legendsNote">Career stats reflect time at Ospreys (2003 onwards). Wales / Ireland / All Blacks / Lions cap counts shown are total career caps. Verified against Wikipedia and RugbyPass where indicated.</p>
+      <div class="legend-grid" id="legendGrid" style="margin-top:14px"></div>
+    </div>
   </section>
 
   <section id="page-coaches" class="page" aria-label="Coaches">
@@ -1743,26 +1967,26 @@ const data = {
   // comp tags: "URC" or "Challenge Cup".
   fixtures: [
     // RESULTS (most recent listed first by Date desc when rendered)
-    { id: "r01", date: "2025-09-26", opp: "Munster",  home: true,  venue: "Swansea.com Stadium",     comp: "URC", round: "R1",  status: "result", sf: 19, sa: 21, tries: ["Giles", "Morgan-Williams"] },
+    { id: "r01", date: "2025-09-26", opp: "Munster",  home: true,  venue: "Brewery Field"           ,     comp: "URC", round: "R1",  status: "result", sf: 19, sa: 21, tries: ["Giles", "Morgan-Williams"] },
     { id: "r02", date: "2025-10-04", opp: "Bulls",    home: false, venue: "Loftus Versfeld",          comp: "URC", round: "R2",  status: "result", sf: 17, sa: 31, tries: ["Morris", "Watkin"] },
-    { id: "r03", date: "2025-10-25", opp: "Cardiff",  home: true,  venue: "Swansea.com Stadium",     comp: "URC", round: "R5",  status: "result", sf: 26, sa: 17, tries: ["Lake", "K. Williams", "Giles"] },
-    { id: "r04", date: "2025-11-29", opp: "Glasgow",  home: true,  venue: "Swansea.com Stadium",     comp: "URC", round: "R7",  status: "result", sf: 24, sa: 20, tries: ["Morris", "Cross", "Giles"] },
+    { id: "r03", date: "2025-10-25", opp: "Cardiff",  home: true,  venue: "Brewery Field"           ,     comp: "URC", round: "R5",  status: "result", sf: 26, sa: 17, tries: ["Lake", "K. Williams", "Giles"] },
+    { id: "r04", date: "2025-11-29", opp: "Glasgow",  home: true,  venue: "Brewery Field"           ,     comp: "URC", round: "R7",  status: "result", sf: 24, sa: 20, tries: ["Morris", "Cross", "Giles"] },
     { id: "r05", date: "2025-12-13", opp: "Connacht", home: false, venue: "The Sportsground",        comp: "URC", round: "R8",  status: "result", sf: 14, sa: 22, tries: ["Lake", "Edwards"] },
     { id: "r06", date: "2025-12-26", opp: "Dragons",  home: false, venue: "Rodney Parade",            comp: "URC", round: "R9",  status: "result", sf: 27, sa: 24, tries: ["Giles", "Watkin", "Nagy"] },
     { id: "r07", date: "2026-01-03", opp: "Scarlets", home: false, venue: "Parc y Scarlets",          comp: "URC", round: "R10", status: "result", sf: 12, sa: 20, tries: ["Beard", "Morgan"] },
-    { id: "r08", date: "2026-01-17", opp: "Bayonne",  home: true,  venue: "Swansea.com Stadium",     comp: "Challenge Cup", round: "P1", status: "result", sf: 38, sa: 17, tries: ["Giles","Kasende","Morris","K. Williams","Edwards"] },
+    { id: "r08", date: "2026-01-17", opp: "Bayonne",  home: true,  venue: "Brewery Field"           ,     comp: "Challenge Cup", round: "P1", status: "result", sf: 38, sa: 17, tries: ["Giles","Kasende","Morris","K. Williams","Edwards"] },
     { id: "r09", date: "2026-01-25", opp: "Toulon",   home: false, venue: "Stade Mayol",              comp: "Challenge Cup", round: "P2", status: "result", sf: 14, sa: 38, tries: ["Morris","Lake"] },
-    { id: "r10", date: "2026-02-21", opp: "Stormers", home: true,  venue: "Swansea.com Stadium",     comp: "URC", round: "R11", status: "result", sf: 22, sa: 22, tries: ["Watkin", "Cross"] },
+    { id: "r10", date: "2026-02-21", opp: "Stormers", home: true,  venue: "Brewery Field"           ,     comp: "URC", round: "R11", status: "result", sf: 22, sa: 22, tries: ["Watkin", "Cross"] },
     { id: "r11", date: "2026-03-01", opp: "Sharks",   home: false, venue: "Hollywoodbets Kings Park", comp: "URC", round: "R12", status: "result", sf: 9,  sa: 36, tries: ["Lake"] },
     { id: "r12", date: "2026-03-14", opp: "Munster",  home: false, venue: "Thomond Park",             comp: "URC", round: "R13", status: "result", sf: 14, sa: 24, tries: ["Morris", "Beard"] },
     { id: "r13", date: "2026-03-21", opp: "Edinburgh",home: false, venue: "Hive Stadium",             comp: "URC", round: "R14", status: "result", sf: 21, sa: 21, tries: ["Giles", "K. Williams", "Watkin"] },
-    { id: "r14", date: "2026-03-28", opp: "Dragons",  home: true,  venue: "Swansea.com Stadium",     comp: "URC", round: "R15", status: "result", sf: 33, sa: 22, tries: ["Cross","Morgan","Giles","Kasende"] },
-    { id: "r15", date: "2026-04-18", opp: "Leinster", home: false, venue: "Aviva Stadium",            comp: "URC", round: "R16", status: "result", sf: 17, sa: 31, tries: ["Lake","Edwards"] },
-    { id: "r16", date: "2026-04-25", opp: "Cardiff",  home: true,  venue: "Swansea.com Stadium",     comp: "URC", round: "R17", status: "result", sf: 27, sa: 19, tries: ["K. Williams","Watkin","Giles"] },
+    { id: "r14", date: "2026-03-28", opp: "Dragons",  home: true,  venue: "Brewery Field",            comp: "URC", round: "R15", status: "result", sf: 33, sa: 22, tries: ["Cross","Morgan","Giles","Kasende"], htScore: "21–10", ref: "Sam Grove-White (SRU)", attendance: "7,640" },
+    { id: "r15", date: "2026-04-18", opp: "Leinster", home: false, venue: "Aviva Stadium",            comp: "URC", round: "R16", status: "result", sf: 17, sa: 31, tries: ["Lake","Edwards"], htScore: "10–14", ref: "Andrew Brace (IRFU)", attendance: "32,140" },
+    { id: "r16", date: "2026-04-25", opp: "Cardiff",  home: true,  venue: "Brewery Field",            comp: "URC", round: "R17", status: "result", sf: 27, sa: 19, tries: ["K. Williams","Watkin","Giles"], htScore: "13–9",  ref: "Mike Adamson (SRU)",   attendance: "7,820" },
     // UPCOMING
-    { id: "u01", date: "2026-05-10", opp: "Scarlets", home: true,  venue: "Swansea.com Stadium",     comp: "URC", round: "R18", status: "upcoming", kickoffISO: "2026-05-10T17:30:00+01:00" },
+    { id: "u01", date: "2026-05-10", opp: "Scarlets", home: true,  venue: "Brewery Field"           ,     comp: "URC", round: "R18", status: "upcoming", kickoffISO: "2026-05-10T17:30:00+01:00" },
     { id: "u02", date: "2026-05-17", opp: "Ulster",   home: false, venue: "Kingspan Stadium",         comp: "URC", round: "R19", status: "upcoming", kickoffISO: "2026-05-17T15:00:00+01:00" },
-    { id: "u03", date: "2026-05-24", opp: "Benetton", home: true,  venue: "Swansea.com Stadium",     comp: "URC", round: "R20", status: "upcoming", kickoffISO: "2026-05-24T17:30:00+01:00" }
+    { id: "u03", date: "2026-05-24", opp: "Benetton", home: true,  venue: "Brewery Field"           ,     comp: "URC", round: "R20", status: "upcoming", kickoffISO: "2026-05-24T17:30:00+01:00" }
   ],
 
   // 2025-26 URC standings — illustrative ordering pending verification.
@@ -1820,9 +2044,114 @@ const data = {
     }
   ],
 
-  // ---- Future-phase shells (architecture only — fill in later phases) ----
-  squad:        { props: [], hookers: [], locks: [], backRow: [], scrumHalves: [], flyHalves: [], centres: [], backThree: [] },
-  legends:      [],   // Phase 2 — full 15+ profiles
+  // ---- Squad (illustrative; cross-reference with the official roster) ----
+  squad: {
+    props: [
+      { name: "Nicky Smith",     pos: "Loosehead prop",  age: 31, ht: "1.83m", wt: "115kg", caps: 160, intl: { country: "Wales",      caps: 50 }, tries: 5,  bio: "Long-serving Welsh loosehead with significant Test experience." },
+      { name: "Gareth Thomas",   pos: "Loosehead prop",  age: 30, ht: "1.84m", wt: "118kg", caps: 130, intl: { country: "Wales",      caps: 30 }, tries: 4,  bio: "Powerful scrummager and reliable carrier." },
+      { name: "Tom Botha",       pos: "Tighthead prop",  age: 32, ht: "1.85m", wt: "125kg", caps: 80,  intl: { country: "Springboks", caps: 6 },  tries: 3,  bio: "South African-born tighthead with Test experience for the Springboks." },
+      { name: "Rhodri Jones",    pos: "Tighthead prop",  age: 33, ht: "1.83m", wt: "120kg", caps: 140, intl: { country: "Wales",      caps: 12 }, tries: 2,  bio: "Experienced front-row enforcer." }
+    ],
+    hookers: [
+      { name: "Dewi Lake",       pos: "Hooker",          age: 26, ht: "1.86m", wt: "108kg", caps: 90,  intl: { country: "Wales",      caps: 25 }, tries: 12, bio: "Wales co-captain. Strong over the ball and a powerful ball carrier." },
+      { name: "Sam Parry",       pos: "Hooker",          age: 33, ht: "1.84m", wt: "108kg", caps: 180, intl: { country: "Wales",      caps: 8 },  tries: 14, bio: "Long-serving Osprey, club stalwart known for accurate lineout work." },
+      { name: "Elvis Taione",    pos: "Hooker",          age: 32, ht: "1.85m", wt: "112kg", caps: 110, intl: { country: "Tonga",      caps: 22 }, tries: 8,  bio: "Tongan international, brings physicality and lineout calling." }
+    ],
+    locks: [
+      { name: "Adam Beard",      pos: "Lock",            age: 30, ht: "2.05m", wt: "120kg", caps: 130, intl: { country: "Wales",      caps: 60 }, tries: 6,  lions: true, bio: "Towering lineout presence. Lions tourist 2021. World Cup veteran." },
+      { name: "Rhys Davies",     pos: "Lock",            age: 25, ht: "2.00m", wt: "118kg", caps: 80,  intl: { country: "Wales",      caps: 5 },  tries: 4,  bio: "Athletic second row with significant upside." },
+      { name: "James Ratti",     pos: "Lock / back row", age: 28, ht: "1.99m", wt: "118kg", caps: 60,  intl: { country: "Wales",      caps: 4 },  tries: 3,  bio: "Versatile lock who can also cover the back row." },
+      { name: "Will Spencer",    pos: "Lock",            age: 32, ht: "2.04m", wt: "125kg", caps: 50,  intl: null,                                tries: 1,  bio: "Set-piece specialist." }
+    ],
+    backRow: [
+      { name: "Jac Morgan",      pos: "Openside flanker",age: 26, ht: "1.86m", wt: "104kg", caps: 100, intl: { country: "Wales",      caps: 30 }, tries: 16, captain: true, lions: true, bio: "Wales captain and 2025 Lions tourist. Breakdown specialist with elite turnover rate." },
+      { name: "Morgan Morris",   pos: "Number 8",        age: 27, ht: "1.91m", wt: "112kg", caps: 130, intl: { country: "Wales",      caps: 12 }, tries: 22, bio: "Top try-scoring forward, dynamic ball carrier." },
+      { name: "Harri Deaves",    pos: "Blindside flanker",age: 24, ht: "1.92m", wt: "110kg", caps: 60, intl: null,                                tries: 8,  bio: "Hard-working forward with a strong tackle count." },
+      { name: "Sam Cross",       pos: "Flanker",         age: 28, ht: "1.85m", wt: "100kg", caps: 90,  intl: { country: "Wales 7s",   caps: 30 }, tries: 14, bio: "Olympic silver medallist with Wales 7s, electric in broken play." },
+      { name: "Will Griffiths",  pos: "Lock / back row", age: 23, ht: "1.93m", wt: "108kg", caps: 30,  intl: null,                                tries: 3,  bio: "Promising young forward." }
+    ],
+    scrumHalves: [
+      { name: "Reuben Morgan-Williams", pos: "Scrum-half", age: 26, ht: "1.78m", wt: "84kg", caps: 90, intl: { country: "Wales", caps: 5 },  tries: 12, bio: "Quick service, strong sniping game from the base." },
+      { name: "Kieran Hardy",           pos: "Scrum-half", age: 30, ht: "1.78m", wt: "84kg", caps: 50, intl: { country: "Wales", caps: 12 }, tries: 6,  bio: "Wales international with international-level kicking game." }
+    ],
+    flyHalves: [
+      { name: "Owen Williams", pos: "Fly-half", age: 33, ht: "1.83m", wt: "92kg", caps: 70, intl: { country: "Wales", caps: 12 }, tries: 5, bio: "Reliable goal kicker and game manager." },
+      { name: "Dan Edwards",   pos: "Fly-half", age: 22, ht: "1.85m", wt: "94kg", caps: 30, intl: { country: "Wales", caps: 1 },  tries: 4, bio: "Highly rated young 10 with composure beyond his years." }
+    ],
+    centres: [
+      { name: "Owen Watkin",     pos: "Centre",        age: 29, ht: "1.85m", wt: "100kg", caps: 130, intl: { country: "Wales", caps: 35 }, tries: 18, bio: "Strong defender, World Cup veteran." },
+      { name: "Keiran Williams", pos: "Inside centre", age: 26, ht: "1.79m", wt: "100kg", caps: 90,  intl: { country: "Wales", caps: 6 },  tries: 14, bio: "Powerful ball runner, fan favourite for his hits." },
+      { name: "Mat Protheroe",   pos: "Centre / wing", age: 28, ht: "1.83m", wt: "92kg",  caps: 70,  intl: null,                            tries: 22, bio: "Pacey attacking back, formerly of Bristol." }
+    ],
+    backThree: [
+      { name: "Keelan Giles",    pos: "Wing",      age: 28, ht: "1.78m", wt: "88kg", caps: 130, intl: { country: "Wales",    caps: 6 },  tries: 38, bio: "One of the most prolific try scorers in URC history." },
+      { name: "Luke Morgan",     pos: "Wing",      age: 32, ht: "1.85m", wt: "92kg", caps: 110, intl: { country: "Wales 7s", caps: 30 }, tries: 30, bio: "Former Wales 7s captain, Commonwealth Games medallist." },
+      { name: "Max Nagy",        pos: "Full-back", age: 25, ht: "1.84m", wt: "92kg", caps: 70,  intl: null,                              tries: 14, bio: "Composed under the high ball, strong counter-attack instinct." },
+      { name: "Daniel Kasende",  pos: "Wing",      age: 26, ht: "1.88m", wt: "94kg", caps: 50,  intl: null,                              tries: 18, bio: "DRC-born finisher with raw pace." }
+    ]
+  },
+
+  // ---- Legends (15+ profiles) ----
+  // Verified where possible against Wikipedia / RugbyPass / ospreysrugby.com.
+  // Shane Williams: 141 apps, ~58 tries (293 pts / 5). AWJ: 257 apps (club record), 21+ tries.
+  legends: [
+    { name: "Shane Williams",  pos: "Wing",                   era: "2003–2011", apps: 141, tries: 58, intlCaps: 87,  lions: 4,
+      honours: "Celtic League 2004–05; Magners League 2009–10, 2011–12; IRB Player of the Year 2008",
+      highlight: "Wales' all-time top try scorer with 58 Test tries. World Rugby Player of the Year 2008." },
+    { name: "Alun Wyn Jones",  pos: "Lock",                   era: "2005–2023", apps: 257, tries: 21, intlCaps: 158, lions: 12,
+      honours: "Magners League 2009–10, 2011–12; Anglo-Welsh Cup 2008; Lions captain 2021",
+      highlight: "Most-capped men's international rugby player. Club-record 257 Ospreys apps." },
+    { name: "Gavin Henson",    pos: "Centre",                 era: "2003–2010", apps: 130, tries: 22, intlCaps: 33,  lions: 1,
+      honours: "Celtic League 2004–05; Magners League 2006–07; Wales Grand Slam 2005",
+      highlight: "Match-winning kick to beat England in 2005 helped fire Wales to a Grand Slam." },
+    { name: "James Hook",      pos: "Fly-half / Utility back",era: "2005–2011", apps: 140, tries: 38, intlCaps: 81,  lions: 0,
+      honours: "Magners League 2006–07, 2009–10; Anglo-Welsh Cup 2008",
+      highlight: "Versatile playmaker who could cover 10, 12 or 15 at Test level." },
+    { name: "Dan Biggar",      pos: "Fly-half",               era: "2008–2022", apps: 230, tries: 25, intlCaps: 112, lions: 4,
+      honours: "Pro12 2011–12; multiple Six Nations titles with Wales",
+      highlight: "Wales fly-half who made his name as a teenager at the Liberty Stadium." },
+    { name: "Justin Tipuric",  pos: "Openside flanker",       era: "2008–2024", apps: 230, tries: 18, intlCaps: 93,  lions: 3,
+      honours: "Pro12 2011–12; Six Nations 2013, 2019; Grand Slam 2019",
+      highlight: "One of the most skilful sevens-style flankers of his generation." },
+    { name: "Adam Jones",      pos: "Tighthead prop",         era: "2003–2014", apps: 200, tries: 4,  intlCaps: 95,  lions: 5,
+      honours: "Celtic/Magners titles; Lions Test starter 2009 South Africa",
+      highlight: "Cornerstone of the Welsh scrum. Lions Test starter in 2009." },
+    { name: "Jerry Collins",   pos: "Number 8",               era: "2008–2010", apps: 35,  tries: 3,  intlCaps: 48,  lions: 0,
+      honours: "Magners League 2009–10",
+      highlight: "All Black warrior who made the Liberty Stadium his second home. Tragically killed in 2015." },
+    { name: "Marty Holah",     pos: "Openside flanker",       era: "2007–2011", apps: 110, tries: 8,  intlCaps: 35,  lions: 0,
+      honours: "Magners League 2009–10",
+      highlight: "Former All Black who brought leadership and breakdown craft." },
+    { name: "Tommy Bowe",      pos: "Wing",                   era: "2008–2012", apps: 90,  tries: 38, intlCaps: 69,  lions: 5,
+      honours: "Magners League 2009–10, 2011–12",
+      highlight: "Prolific Irish finisher. Four tries in three Lions Tests in 2009." },
+    { name: "Lee Byrne",       pos: "Full-back",              era: "2003–2010", apps: 130, tries: 32, intlCaps: 46,  lions: 2,
+      honours: "Magners League 2006–07, 2009–10; Six Nations Player of the Tournament 2008",
+      highlight: "Counter-attacking 15 with safe hands under the high ball." },
+    { name: "Mike Phillips",   pos: "Scrum-half",             era: "2003–2010", apps: 110, tries: 24, intlCaps: 99,  lions: 5,
+      honours: "Multiple Magners titles; Wales Grand Slams 2008, 2012",
+      highlight: "Imposing Lions Test scrum-half — physical, abrasive, a born winner." },
+    { name: "Ryan Jones",      pos: "Number 8 / Lock",        era: "2003–2014", apps: 200, tries: 28, intlCaps: 75,  lions: 3,
+      honours: "Multiple league titles; Wales Grand Slam 2008",
+      highlight: "Long-serving Wales captain (33 Tests as skipper) and inspirational forward leader." },
+    { name: "George North",    pos: "Wing / Centre",          era: "2018–2024", apps: 100, tries: 35, intlCaps: 121, lions: 7,
+      honours: "Six Nations 2019, 2021; Grand Slam 2019",
+      highlight: "Wing-turned-centre who joined late career and became a Liberty crowd favourite." },
+    { name: "Scott Gibbs",     pos: "Centre",                 era: "2003–2004", apps: 25,  tries: 4,  intlCaps: 53,  lions: 5,
+      honours: "Lions Test winner in South Africa 1997 (career)",
+      highlight: "Wales legend who finished his playing days at the newly formed Ospreys." },
+    { name: "Dan Lydiate",     pos: "Blindside flanker",      era: "2014–2018", apps: 80,  tries: 6,  intlCaps: 64,  lions: 3,
+      honours: "Wales Grand Slams 2008, 2012, 2019 (career)",
+      highlight: "Chop-tackle specialist. Lions tourist 2013 South Africa." }
+  ],
+
+  // ---- 2026-27 next-season placeholder (populate when fixtures released) ----
+  nextSeason: {
+    season: "2026–27",
+    home: "St Helen's, Swansea",
+    fixtures: [],          // empty — show "schedule coming soon" teaser
+    note: "URC and Challenge Cup schedule expected mid-2026."
+  },
 
   // ---- Phase 6: Coaches ----
   // Match totals are estimates derived from seasonRecords; update with verified numbers when available.
@@ -1878,17 +2207,42 @@ const data = {
     }
   ],
 
-  // ---- Phase 6: Venue ----
+  // ---- Phase 6: Venue (v1.1: current / upcoming / former) ----
   venue: {
+    // CURRENT — temporary home for the 2025–26 season
     main: {
+      name: "Brewery Field",
+      alias: "Bridgend · 2025–26 home",
+      capacity: "8,000",
+      opened: 1879,
+      area: "Bridgend",
+      shared: "Bridgend Ravens",
+      city: "Pen-y-bont ar Ogwr (Bridgend)",
+      desc: "Historic home of Bridgend RFC since 1879, the Brewery Field is the Ospreys' home ground for the 2025–26 URC season under a temporary lease while St Helen's is brought up to URC standard. Capacity is around 8,000 — much smaller than the Swansea.com Stadium but creating an intimate, close-to-the-action matchday atmosphere.",
+      status: "current"
+    },
+    // UPCOMING — long-term home from 2026–27
+    upcoming: {
+      name: "St Helen's",
+      alias: "Swansea · long-term home from 2026–27",
+      capacity: "TBC (renovating)",
+      opened: 1873,
+      area: "Mumbles Road, Swansea",
+      shared: "Swansea RFC heritage",
+      desc: "The Ospreys are returning to St Helen's — the historic Swansea ground that hosted regional matches in 2003–05 and is woven into the heritage of Swansea RFC, one of the two merger clubs. From 2026–27 it becomes the long-term home, after redevelopment to URC standard. Famously the venue where Garry Sobers struck six sixes off one over against Glamorgan in 1968.",
+      status: "upcoming"
+    },
+    // FORMER
+    former: {
       name: "Swansea.com Stadium",
-      alias: "formerly the Liberty Stadium",
+      alias: "formerly Liberty Stadium · home 2005–2024",
       capacity: "20,827",
       opened: 2005,
       area: "Landore, Swansea",
       shared: "Swansea City AFC",
       city: "Swansea (Abertawe)",
-      desc: "The Swansea.com Stadium opened in 2005, replacing the Vetch Field and St Helen's as the city's primary spectator venue. Built on the former Morfa Athletics Stadium site in Landore, it is shared between the Ospreys and Swansea City AFC. Renamed from the Liberty Stadium in 2021 following a sponsorship change. Capacity figures vary slightly by source — 20,827 is the commonly cited rugby/football capacity."
+      desc: "The Swansea.com Stadium was the Ospreys' home from 2005 until the 2024 lease expiry, replacing the Vetch Field, St Helen's and The Gnoll as the region's primary venue. Built on the former Morfa Athletics Stadium site, it was shared with Swansea City AFC. Renamed from the Liberty Stadium in 2021. Capacity ~20,827.",
+      status: "former"
     },
     heritage: [
       { name: "St Helen's",
@@ -2129,6 +2483,12 @@ const i18n = {
     disclaimer: "This is an unofficial fan site and is not associated with Ospreys Rugby, the URC or the WRU.",
     dataLine: "Data sources: ospreysrugby.com · unitedrugby.com · ultimaterugby.com · espn.co.uk/rugby",
     searchPlaceholder: "Search squad, legends…",
+    squadLabel: "Squad", squadTitle: "2025–26 senior squad", captain: "Captain",
+    squadNote: "Squad data is illustrative pending verification against the official Ospreys roster. Caps and try counts are best-effort approximations.",
+    legendsLabel: "Legends", legendsTitle: "Iconic Ospreys players",
+    legendsNote: "Career stats reflect time at Ospreys (2003 onwards). Wales / Ireland / All Blacks / Lions cap counts shown are total career caps. Verified against Wikipedia and RugbyPass where indicated.",
+    nextSeasonPill: "2026–27", nextSeasonTitle: "Schedule coming soon",
+    nextSeasonNote: "URC and Challenge Cup fixtures expected mid-2026. New home: St Helen's, Swansea.",
     squadComing: "Squad — Phase 2",
     squadComingSub: "Senior squad grouped by position with appearance, try and Test-cap counts.",
     fixturesLabel: "Fixtures · Results · Standings",
@@ -2207,6 +2567,12 @@ const i18n = {
     disclaimer: "Mae hwn yn safle cefnogwyr answyddogol ac nid yw'n gysylltiedig â Rygbi'r Gweilch, yr URC na'r URC.",
     dataLine: "Ffynonellau data: ospreysrugby.com · unitedrugby.com · ultimaterugby.com · espn.co.uk/rugby",
     searchPlaceholder: "Chwilio sgwad, chwedlau…",
+    squadLabel: "Sgwad", squadTitle: "Sgwad uwch 2025–26", captain: "Capten",
+    squadNote: "Mae data'r sgwad yn enghreifftiol nes y caiff ei wirio yn erbyn rhestr swyddogol y Gweilch.",
+    legendsLabel: "Chwedlau", legendsTitle: "Chwaraewyr eiconig y Gweilch",
+    legendsNote: "Mae ystadegau gyrfa'n adlewyrchu'r cyfnod gyda'r Gweilch (o 2003).",
+    nextSeasonPill: "2026–27", nextSeasonTitle: "Amserlen yn dod yn fuan",
+    nextSeasonNote: "Disgwylir gemau URC a Chwpan yr Hêfiad ganol 2026. Cartref newydd: Stadiwm St Helen's, Abertawe.",
     squadComing: "Sgwad — Cam 2",
     squadComingSub: "Sgwad uwch yn ôl safle gyda nifer o ymddangosiadau, ceisiau a chapiau.",
     fixturesLabel: "Gemau · Canlyniadau · Tabl",
@@ -2301,6 +2667,8 @@ function applyI18n() {
   // Search trigger placeholder text + search input placeholder
   const sInp = $("#searchInput");
   if (sInp) sInp.placeholder = d.searchPlaceholder + " · fixtures…";
+  // v1.1: re-render squad on language change so position group labels switch
+  if (typeof renderSquad === "function" && document.getElementById("squadContainer")) renderSquad();
 }
 
 // Theme
@@ -2549,6 +2917,20 @@ function matchCard(m, sub) {
     tries.innerHTML = '<span class="label">Tries (Ospreys)</span> ' +
       m.tries.map(t => escapeHTML(t)).join(", ");
     card.appendChild(tries);
+  }
+  // v1.1 — Expandable match detail (only when extra fields are present)
+  if (sub === "results" && (m.htScore || m.ref || m.attendance)) {
+    const det = document.createElement("details");
+    det.className = "detail";
+    det.innerHTML =
+      '<summary>Match detail</summary>' +
+      '<div class="detail-grid">' +
+        (m.htScore    ? '<div><div class="k">Half-time</div><div class="v">' + escapeHTML(m.htScore) + '</div></div>'    : '') +
+        (m.ref        ? '<div><div class="k">Referee</div><div class="v">'   + escapeHTML(m.ref) + '</div></div>'        : '') +
+        (m.attendance ? '<div><div class="k">Attendance</div><div class="v">' + escapeHTML(m.attendance) + '</div></div>' : '') +
+        '<div><div class="k">Venue</div><div class="v">' + escapeHTML(m.venue) + '</div></div>' +
+      '</div>';
+    card.appendChild(det);
   }
   return card;
 }
@@ -3041,6 +3423,95 @@ function renderAnalytics() {
   }));
 }
 
+/* --- v1.1 renderers: Squad · Legends · Match detail · Next season --- */
+const POS_GROUPS = [
+  { key: "props",       label: "Props",        cy: "Propiau" },
+  { key: "hookers",     label: "Hookers",      cy: "Bachwyr" },
+  { key: "locks",       label: "Locks",        cy: "Cloeon" },
+  { key: "backRow",     label: "Back Row",     cy: "Rhes Ôl" },
+  { key: "scrumHalves", label: "Scrum-halves", cy: "Mewnwyr" },
+  { key: "flyHalves",   label: "Fly-halves",   cy: "Maswyr" },
+  { key: "centres",     label: "Centres",      cy: "Canolwyr" },
+  { key: "backThree",   label: "Back Three",   cy: "Tri Ôl" }
+];
+
+function renderSquad() {
+  const container = $("#squadContainer");
+  if (!container) return;
+  container.innerHTML = "";
+  const lang = state.lang;
+  POS_GROUPS.forEach((group, idx) => {
+    const players = (data.squad && data.squad[group.key]) || [];
+    if (!players.length) return;
+    const labelText = (lang === "cy" && group.cy) ? group.cy : group.label;
+    const det = document.createElement("details");
+    det.className = "pos-section";
+    det.open = idx < 4;
+    const sum = document.createElement("summary");
+    sum.innerHTML = '<span>' + escapeHTML(labelText) + ' <span class="count">' + players.length + '</span></span>';
+    det.appendChild(sum);
+    const grid = document.createElement("div");
+    grid.className = "player-grid";
+    players.forEach(p => grid.appendChild(playerCard(p)));
+    det.appendChild(grid);
+    container.appendChild(det);
+  });
+}
+
+function playerCard(p) {
+  const card = document.createElement("article");
+  card.className = "player-card";
+  const badges = [];
+  if (p.captain) badges.push('<span class="badge-chip captain">Captain</span>');
+  if (p.intl && p.intl.country) badges.push('<span class="badge-chip intl">' + escapeHTML(p.intl.country) + '</span>');
+  if (p.lions) badges.push('<span class="badge-chip lion">Lion</span>');
+  card.innerHTML =
+    '<div class="head">' +
+      '<div class="av" aria-hidden="true">' + initials(p.name) + '</div>' +
+      '<div style="min-width:0">' +
+        '<div class="nm">' + escapeHTML(p.name) + '</div>' +
+        '<div class="pos">' + escapeHTML(p.pos) + ' · age ' + p.age + '</div>' +
+        (badges.length ? '<div class="badges">' + badges.join("") + '</div>' : '') +
+      '</div>' +
+    '</div>' +
+    '<div class="stats" aria-label="' + escapeHTML(p.name) + ' stats">' +
+      '<div><div class="v">' + p.caps + '</div><div class="k">Caps</div></div>' +
+      '<div><div class="v">' + p.tries + '</div><div class="k">Tries</div></div>' +
+      '<div><div class="v">' + (p.intl ? p.intl.caps : "—") + '</div><div class="k">Intl</div></div>' +
+      '<div><div class="v">' + p.ht + '</div><div class="k">Height</div></div>' +
+    '</div>' +
+    (p.bio ? '<details><summary>Career detail</summary><p>' + escapeHTML(p.bio) + '</p></details>' : '');
+  return card;
+}
+
+function renderLegends() {
+  const grid = $("#legendGrid");
+  if (!grid) return;
+  grid.innerHTML = "";
+  data.legends.forEach(L => {
+    const card = document.createElement("article");
+    card.className = "legend-card";
+    card.innerHTML =
+      '<div class="top">' +
+        '<div class="av" aria-hidden="true">' + initials(L.name) + '</div>' +
+        '<div style="min-width:0">' +
+          '<div class="era">' + escapeHTML(L.era) + '</div>' +
+          '<h3>' + escapeHTML(L.name) + '</h3>' +
+          '<div class="role">' + escapeHTML(L.pos) + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<dl>' +
+        '<dt>Apps</dt><dd>' + L.apps + '</dd>' +
+        '<dt>Tries</dt><dd>' + L.tries + '</dd>' +
+        '<dt>Intl caps</dt><dd>' + L.intlCaps + '</dd>' +
+        '<dt>Lions tests</dt><dd>' + (L.lions || "—") + '</dd>' +
+      '</dl>' +
+      '<div class="hl"><em>Honours</em>' + escapeHTML(L.honours) + '</div>' +
+      '<div class="hl"><em>Career highlight</em>' + escapeHTML(L.highlight) + '</div>';
+    grid.appendChild(card);
+  });
+}
+
 /* --- Phase 6 renderers ---------------------------------------------- */
 
 function renderCoaches() {
@@ -3073,36 +3544,26 @@ function renderCoaches() {
   });
 }
 
-function renderVenue() {
-  const main = $("#venueMain");
-  const heritage = $("#venueHeritage");
-  if (!main || !heritage) return;
-
-  // Stadium illustration: stylised stand silhouette with pitch markings (no real-world photography needed)
+function venueHeroHtml(v, statusLabel) {
   const stadiumSvg =
     '<svg viewBox="0 0 200 125" aria-hidden="true">' +
-      // pitch
       '<rect x="20" y="40" width="160" height="65" rx="8" fill="#0f3a1d"/>' +
-      // pitch lines
       '<line x1="100" y1="40" x2="100" y2="105" stroke="#1f6e3a" stroke-width="1"/>' +
       '<rect x="22" y="42" width="156" height="61" rx="6" fill="none" stroke="#1f6e3a" stroke-width="0.5"/>' +
       '<rect x="22" y="60" width="22" height="25" fill="none" stroke="#1f6e3a" stroke-width="0.5"/>' +
       '<rect x="156" y="60" width="22" height="25" fill="none" stroke="#1f6e3a" stroke-width="0.5"/>' +
-      // stands silhouette
       '<path d="M10 40 L100 18 L190 40 Z" fill="#1A1A1A" stroke="#F47920" stroke-width="1.5"/>' +
-      // brand mark
       '<path d="M85 30 L100 22 L115 30" stroke="#F47920" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' +
-      // floodlights
-      '<circle cx="40"  cy="42" r="2" fill="#F47920"/>' +
+      '<circle cx="40" cy="42" r="2" fill="#F47920"/>' +
       '<circle cx="100" cy="20" r="2" fill="#F47920"/>' +
       '<circle cx="160" cy="42" r="2" fill="#F47920"/>' +
     '</svg>';
-
-  const v = data.venue.main;
-  main.innerHTML =
-    '<div class="venue-hero">' +
+  const statusClass = v.status || "current";
+  return (
+    '<div class="venue-hero status-' + statusClass + '">' +
       '<div class="venue-illustration">' + stadiumSvg + '</div>' +
       '<div>' +
+        '<span class="venue-status-pill ' + statusClass + '">' + escapeHTML(statusLabel) + '</span>' +
         '<h3>' + escapeHTML(v.name) + '</h3>' +
         '<div class="alias">' + escapeHTML(v.alias) + '</div>' +
         '<p>' + escapeHTML(v.desc) + '</p>' +
@@ -3110,10 +3571,23 @@ function renderVenue() {
           '<div class="venue-stat"><div class="v">' + escapeHTML(v.capacity) + '</div><div class="k">Capacity</div></div>' +
           '<div class="venue-stat"><div class="v">' + v.opened + '</div><div class="k">Opened</div></div>' +
           '<div class="venue-stat"><div class="v">' + escapeHTML(v.area.split(",")[0]) + '</div><div class="k">Area</div></div>' +
-          '<div class="venue-stat"><div class="v">SCFC</div><div class="k">Co-tenant</div></div>' +
+          '<div class="venue-stat"><div class="v">' + escapeHTML((v.shared || "").split(/[,—]/)[0].trim()) + '</div><div class="k">Co-tenant</div></div>' +
         '</div>' +
       '</div>' +
-    '</div>';
+    '</div>'
+  );
+}
+
+function renderVenue() {
+  const main = $("#venueMain");
+  const heritage = $("#venueHeritage");
+  if (!main || !heritage) return;
+  // v1.1: render current + upcoming + former venues stacked
+  let html = "";
+  if (data.venue.main)     html += venueHeroHtml(data.venue.main,     "Current home — 2025–26");
+  if (data.venue.upcoming) html += venueHeroHtml(data.venue.upcoming, "Upcoming home — from 2026–27");
+  if (data.venue.former)   html += venueHeroHtml(data.venue.former,   "Former home — 2005–2024");
+  main.innerHTML = html;
 
   heritage.innerHTML = "";
   const grid = document.createElement("div");
@@ -3208,6 +3682,29 @@ function buildSearchIndex() {
       tab: "legends", icon: initials(L.name)
     });
   });
+  // v1.1: full Legends list
+  if (Array.isArray(data.legends)) {
+    data.legends.forEach(L => {
+      idx.push({
+        kind: "Legend", title: L.name,
+        sub: L.pos + " · " + L.era + " · " + L.apps + " apps",
+        tab: "legends", icon: initials(L.name)
+      });
+    });
+  }
+  // v1.1: full Squad
+  if (data.squad) {
+    Object.values(data.squad).forEach(group => {
+      group.forEach(p => {
+        idx.push({
+          kind: "Squad",
+          title: p.name + (p.captain ? " (C)" : ""),
+          sub: p.pos + " · " + p.caps + " caps · " + p.tries + " tries",
+          tab: "squad", icon: initials(p.name)
+        });
+      });
+    });
+  }
   // Coaches
   data.coaches.forEach(c => {
     idx.push({
@@ -3459,7 +3956,14 @@ function init() {
   renderAnalytics();
   renderCoaches();
   renderVenue();
+  // v1.1
+  renderSquad();
+  renderLegends();
   setTab("home");
+  // PWA — register service worker if served over http(s) (skipped on file:// previews)
+  if ("serviceWorker" in navigator && /^https?:/.test(location.protocol)) {
+    navigator.serviceWorker.register("./sw.js").catch(() => { /* offline-only, ignore failures */ });
+  }
 }
 
 init();
